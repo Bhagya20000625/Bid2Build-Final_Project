@@ -1,0 +1,491 @@
+import React, { useState, useEffect } from 'react';
+import { Search, MapPin, Calendar, DollarSign, Eye, Filter, Send, X } from 'lucide-react';
+import projectService from '../../services/projectService.js';
+import bidService from '../../services/bidService.js';
+
+const BrowseProjects = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [bidFormData, setBidFormData] = useState({
+    bid_amount: '',
+    proposed_timeline: '',
+    description: ''
+  });
+
+  // Load projects for constructors on component mount
+  useEffect(() => {
+    loadConstructorProjects();
+  }, []);
+
+  const loadConstructorProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await projectService.getProjectsForConstructors();
+      
+      if (result.success && result.projects) {
+        setProjects(result.projects);
+      } else {
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error loading constructor projects:', error);
+      setError('Failed to load projects');
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitBid = async (projectId) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setSelectedProject(project);
+      setBidFormData({
+        bid_amount: '',
+        proposed_timeline: '',
+        description: ''
+      });
+      setShowBidModal(true);
+    }
+  };
+
+  const handleBidSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProject) return;
+
+    try {
+      // Get user data from localStorage (assuming constructor is logged in)
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const bidderId = user.id || 1; // fallback for testing
+
+      const bidData = {
+        project_id: selectedProject.id,
+        bidder_user_id: bidderId,
+        bidder_role: 'constructor',
+        bid_amount: parseFloat(bidFormData.bid_amount),
+        proposed_timeline: bidFormData.proposed_timeline,
+        description: bidFormData.description
+      };
+
+      const result = await bidService.createBid(bidData);
+      
+      if (result.success) {
+        alert('Bid submitted successfully!');
+        setShowBidModal(false);
+        setBidFormData({
+          bid_amount: '',
+          proposed_timeline: '',
+          description: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting bid:', error);
+      alert('Failed to submit bid. Please try again.');
+    }
+  };
+
+  const handleBidInputChange = (e) => {
+    const { name, value } = e.target;
+    setBidFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleDownloadFile = async (fileId, fileName) => {
+    try {
+      const response = await projectService.downloadProjectFile(selectedProject.id, fileId);
+      
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or use provided fileName
+      const contentDisposition = response.headers['content-disposition'];
+      const fileNameFromHeader = contentDisposition ? 
+        contentDisposition.split('filename=')[1]?.replace(/"/g, '') : 
+        fileName;
+        
+      link.setAttribute('download', fileNameFromHeader || fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert('Failed to download file. Please try again.');
+    }
+  };
+
+  const mockProjects = [
+    {
+      id: 1,
+      title: 'Office Building Renovation',
+      location: 'Downtown Seattle, WA',
+      budget: '$250,000 - $300,000',
+      deadline: '2025-03-15',
+      category: 'Commercial',
+      description: 'Complete renovation of a 10,000 sq ft office building including HVAC, electrical, and interior design.',
+      postedDate: '2025-01-10',
+      bidsCount: 12,
+      status: 'Open'
+    },
+    {
+      id: 2,
+      title: 'Residential Kitchen Remodel',
+      location: 'Bellevue, WA',
+      budget: '$45,000 - $65,000',
+      deadline: '2025-02-28',
+      category: 'Residential',
+      description: 'Modern kitchen renovation with custom cabinets, granite countertops, and premium appliances.',
+      postedDate: '2025-01-12',
+      bidsCount: 8,
+      status: 'Open'
+    },
+    {
+      id: 3,
+      title: 'Warehouse Construction',
+      location: 'Tacoma, WA',
+      budget: '$800,000 - $1,200,000',
+      deadline: '2025-06-30',
+      category: 'Industrial',
+      description: '50,000 sq ft warehouse construction with loading docks and office space.',
+      postedDate: '2025-01-08',
+      bidsCount: 15,
+      status: 'Open'
+    },
+    {
+      id: 4,
+      title: 'School Playground Installation',
+      location: 'Redmond, WA',
+      budget: '$75,000 - $90,000',
+      deadline: '2025-04-15',
+      category: 'Public',
+      description: 'Installation of playground equipment, safety surfacing, and landscaping.',
+      postedDate: '2025-01-05',
+      bidsCount: 6,
+      status: 'Open'
+    }
+  ];
+
+  const categories = ['all', 'Commercial', 'Residential', 'Industrial', 'Public'];
+
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || project.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleViewDetails = async (projectId) => {
+    try {
+      const result = await projectService.getProjectById(projectId);
+      if (result.success && result.project) {
+        setSelectedProject(result.project);
+        setShowDetailsModal(true);
+      }
+    } catch (error) {
+      console.error('Error loading project details:', error);
+      alert('Failed to load project details');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Browse Projects</h1>
+        <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+          <span className="text-sm text-gray-500">{filteredProjects.length} projects found</span>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                placeholder="Search projects by title or location..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div className="sm:w-48">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <p className="text-gray-500">Loading projects...</p>
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <p className="text-gray-500">No projects found matching your criteria.</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProjects.map((project) => (
+          <div
+            key={project.id}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
+          >
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                  {project.title}
+                </h3>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {project.status || 'Open'}
+                </span>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center text-sm text-gray-600">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  {project.location}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {project.budget_range || project.budget}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Timeline: {project.timeline || project.deadline}
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                {project.description}
+              </p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 space-x-2">
+                <button 
+                  onClick={() => handleViewDetails(project.id)}
+                  className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  View Details
+                </button>
+
+                <button
+                  onClick={() => handleSubmitBid(project.id)}
+                  className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                >
+                  <Send className="h-4 w-4 mr-1" />
+                  Submit Bid
+                </button>
+              </div>
+            </div>
+          </div>
+          ))}
+        </div>
+      )}
+
+      {/* Project Details Modal */}
+      {showDetailsModal && selectedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Project Details</h2>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedProject.title}</h3>
+                  <p className="text-gray-600 mt-2">{selectedProject.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    {selectedProject.location}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    {selectedProject.budget_range}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {selectedProject.timeline}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Category: {selectedProject.category}
+                  </div>
+                </div>
+
+                {selectedProject.files && selectedProject.files.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Project Files:</h4>
+                    <ul className="space-y-2">
+                      {selectedProject.files.map((file, index) => (
+                        <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                          <div className="flex items-center">
+                            <span className="mr-2">📄</span>
+                            <span className="text-sm text-gray-700">{file.original_name}</span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              ({file.file_size ? (file.file_size / 1024).toFixed(1) + ' KB' : 'Unknown size'})
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDownloadFile(file.id, file.original_name)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors duration-200"
+                          >
+                            Download
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDetailsModal(false);
+                    handleSubmitBid(selectedProject.id);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Submit Bid
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submit Bid Modal */}
+      {showBidModal && selectedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Submit Bid</h2>
+                <button
+                  onClick={() => setShowBidModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">Project: <span className="font-medium">{selectedProject.title}</span></p>
+              </div>
+
+              <form onSubmit={handleBidSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bid Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    name="bid_amount"
+                    value={bidFormData.bid_amount}
+                    onChange={handleBidInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your bid amount"
+                    required
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Proposed Timeline
+                  </label>
+                  <input
+                    type="text"
+                    name="proposed_timeline"
+                    value={bidFormData.proposed_timeline}
+                    onChange={handleBidInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 3 months, 8 weeks"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={bidFormData.description}
+                    onChange={handleBidInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Describe your approach, experience, or any relevant details..."
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowBidModal(false)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Submit Bid
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default BrowseProjects;
