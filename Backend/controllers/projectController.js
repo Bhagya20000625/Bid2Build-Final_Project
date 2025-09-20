@@ -272,12 +272,14 @@ const getProjectById = async (req, res) => {
     const { id } = req.params;
 
     const [projects] = await pool.execute(
-      `SELECT p.*, u.first_name, u.last_name, u.email,
+      `SELECT p.*,
+              COALESCE(u.first_name, 'Unknown') as first_name,
+              COALESCE(u.last_name, 'Customer') as last_name,
+              COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
-       FROM projects p 
-       JOIN users u ON p.customer_id = (
-         SELECT user_id FROM customers WHERE id = p.customer_id
-       )
+       FROM projects p
+       LEFT JOIN customers c ON p.customer_id = c.id
+       LEFT JOIN users u ON c.user_id = u.id
        LEFT JOIN bids b ON p.id = b.project_id
        WHERE p.id = ?
        GROUP BY p.id`,

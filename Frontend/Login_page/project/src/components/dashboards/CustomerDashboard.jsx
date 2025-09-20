@@ -21,7 +21,7 @@ const CustomerDashboard = () => {
         <Routes>
           <Route path="/" element={<div className="p-8"><Home /></div>} />
           <Route path="/post-project" element={<PostProject />} />
-          <Route path="/view-bids" element={<ViewBids />} />
+          <Route path="/view-bids" element={<div className="p-8"><ViewBids /></div>} />
           <Route path="/project-progress" element={<ProjectProgress />} />
           <Route path="/payments" element={<div className="p-8"><Payments /></div>} />
           <Route path="/materials" element={<div className="p-8"><MaterialsRequest /></div>} />

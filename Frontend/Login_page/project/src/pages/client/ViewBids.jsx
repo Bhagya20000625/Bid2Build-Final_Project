@@ -3,6 +3,36 @@ import { Star, Clock, DollarSign, CheckCircle, X, Eye } from 'lucide-react';
 import projectService from '../../services/projectService.js';
 import bidService from '../../services/bidService.js';
 
+// DUMMY BIDS FOR TESTING - WILL REPLACE WITH REAL DATA
+const DUMMY_BIDS = [
+  {
+    id: 1001,
+    bidder_user_id: 1,
+    bidder_role: 'constructor',
+    first_name: 'DUMMY',
+    last_name: 'Constructor',
+    email: 'dummy@test.com',
+    bid_amount: '95000.00',
+    proposed_timeline: '6 months',
+    description: 'This is a DUMMY BID for testing purposes. We offer excellent construction services with modern techniques and quality materials.',
+    status: 'pending',
+    submitted_at: '2024-01-20T10:00:00Z'
+  },
+  {
+    id: 1002,
+    bidder_user_id: 2,
+    bidder_role: 'constructor',
+    first_name: 'Test',
+    last_name: 'Builder',
+    email: 'test@builder.com',
+    bid_amount: '120000.00',
+    proposed_timeline: '5 months',
+    description: 'Professional construction company with 15+ years experience. We specialize in commercial and residential projects.',
+    status: 'pending',
+    submitted_at: '2024-01-18T14:30:00Z'
+  }
+];
+
 const ViewBids = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [projects, setProjects] = useState([]);
@@ -10,6 +40,8 @@ const ViewBids = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [showBidDetailsModal, setShowBidDetailsModal] = useState(false);
+  const [selectedBidDetails, setSelectedBidDetails] = useState(null);
 
   // Load customer projects on component mount
   useEffect(() => {
@@ -53,18 +85,21 @@ const ViewBids = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await bidService.getBidsByProject(projectId);
-      
+
       if (result.success && result.bids) {
-        setBids(result.bids);
+        // Combine real bids with dummy bids for testing
+        setBids([...result.bids, ...DUMMY_BIDS]);
       } else {
-        setBids([]);
+        // If no real bids, show dummy bids for testing
+        setBids(DUMMY_BIDS);
       }
     } catch (error) {
       console.error('Error loading bids:', error);
-      setError('Failed to load bids');
-      setBids([]);
+      setError('Failed to load bids - showing dummy data for testing');
+      // Show dummy bids even if API fails
+      setBids(DUMMY_BIDS);
     } finally {
       setLoading(false);
     }
@@ -74,11 +109,12 @@ const ViewBids = () => {
     try {
       setActionLoading(bidId);
       setError(null);
-      
+
       const status = action === 'accept' ? 'accepted' : 'rejected';
       const result = await bidService.updateBidStatus(bidId, status);
-      
+
       if (result.success) {
+        alert(`Bid ${action}ed successfully!`);
         // Reload bids to show updated status
         await loadProjectBids(selectedProject);
       }
@@ -88,6 +124,11 @@ const ViewBids = () => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleViewBidDetails = (bid) => {
+    setSelectedBidDetails(bid);
+    setShowBidDetailsModal(true);
   };
 
   const renderStars = (rating) => {
@@ -112,135 +153,205 @@ const ViewBids = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Project</h2>
-        {loading && projects.length === 0 ? (
+      {/* Projects and their bids */}
+      {loading && projects.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <p className="text-gray-500">Loading projects...</p>
-        ) : projects.length === 0 ? (
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <p className="text-gray-500">No projects found. Create a project first to receive bids.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <button
-                key={project.id}
-                onClick={() => setSelectedProject(project.id)}
-                className={`p-4 rounded-lg border-2 transition-colors duration-200 text-left ${
-                  selectedProject === project.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <h3 className="font-medium text-gray-900">{project.title}</h3>
-                <p className="text-sm text-gray-500 mt-1">{project.bid_count || 0} bids received</p>
-                <p className="text-xs text-gray-400 mt-1">{project.category} • {project.location}</p>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {projects.map((project) => (
+            <div key={project.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              {/* Project Header */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">{project.title}</h2>
+                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                    {(project.bid_count || 0) + DUMMY_BIDS.length} bids received
+                  </span>
+                  <span>{project.category}</span>
+                  <span>{project.location}</span>
+                </div>
+              </div>
 
-      {selectedProject && (
-        <div className="space-y-6">
-          {loading && bids.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <p className="text-gray-500">Loading bids...</p>
+              {/* Bids List */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+                  Received Bids
+                </h3>
+
+                {DUMMY_BIDS.length === 0 ? (
+                  <p className="text-gray-500 py-4">No bids received yet for this project.</p>
+                ) : (
+                  DUMMY_BIDS.map((bid) => (
+                    <div
+                      key={bid.id}
+                      onClick={() => handleViewBidDetails(bid)}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h4 className="font-semibold text-gray-900">
+                              {bid.first_name} {bid.last_name}
+                            </h4>
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              {bid.bidder_role}
+                            </span>
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                              {bid.status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-6 text-sm text-gray-600 mb-2">
+                            <div className="flex items-center space-x-1">
+                              <DollarSign className="w-4 h-4 text-green-600" />
+                              <span className="font-semibold">${parseFloat(bid.bid_amount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-4 h-4 text-blue-600" />
+                              <span>{bid.proposed_timeline}</span>
+                            </div>
+                            <span className="text-gray-500">{bid.email}</span>
+                          </div>
+
+                          <p className="text-gray-700 text-sm line-clamp-2">{bid.description}</p>
+                        </div>
+
+                        <div className="ml-4">
+                          <Eye className="w-5 h-5 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          ) : bids.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <p className="text-gray-500">No bids received yet for this project.</p>
+          ))}
+        </div>
+      )}
+
+      {/* Bid Details Modal */}
+      {showBidDetailsModal && selectedBidDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-gray-900">Bid Details</h2>
+                <button
+                  onClick={() => setShowBidDetailsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
             </div>
-          ) : (
-            bids.map((bid) => (
-              <div key={bid.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {bid.first_name} {bid.last_name}
-                      </h3>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        bid.bidder_role === 'constructor' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : bid.bidder_role === 'architect'
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Bidder Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-medium text-gray-700">Name:</span>
+                      <p className="text-gray-600">{selectedBidDetails.first_name} {selectedBidDetails.last_name}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Email:</span>
+                      <p className="text-gray-600">{selectedBidDetails.email}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Role:</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-2 ${
+                        selectedBidDetails.bidder_role === 'constructor'
+                          ? 'bg-blue-100 text-blue-800'
+                          : selectedBidDetails.bidder_role === 'architect'
                           ? 'bg-purple-100 text-purple-800'
                           : 'bg-green-100 text-green-800'
                       }`}>
-                        {bid.bidder_role}
+                        {selectedBidDetails.bidder_role}
                       </span>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        bid.status === 'pending' 
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Status:</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-2 ${
+                        selectedBidDetails.status === 'pending'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : bid.status === 'accepted'
+                          : selectedBidDetails.status === 'accepted'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {bid.status}
+                        {selectedBidDetails.status}
                       </span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <span className="font-medium">{bid.email}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-gray-700 mb-4">{bid.description}</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Bid Amount</p>
-                          <p className="font-semibold text-gray-900">${parseFloat(bid.bid_amount).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <p className="text-sm text-gray-500">Timeline</p>
-                          <p className="font-semibold text-gray-900">{bid.proposed_timeline}</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm text-gray-500">Submitted</p>
-                        <p className="font-semibold text-gray-900">{new Date(bid.submitted_at).toLocaleDateString()}</p>
-                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors duration-200">
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm">View Details</span>
-                  </button>
-                  
-                  {bid.status === 'pending' && (
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={() => handleBidAction(bid.id, 'reject')}
-                        disabled={actionLoading === bid.id}
-                        className="flex items-center space-x-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>{actionLoading === bid.id ? 'Rejecting...' : 'Reject'}</span>
-                      </button>
-                      <button
-                        onClick={() => handleBidAction(bid.id, 'accept')}
-                        disabled={actionLoading === bid.id}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>{actionLoading === bid.id ? 'Accepting...' : 'Accept'}</span>
-                      </button>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Bid Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-medium text-gray-700">Bid Amount:</span>
+                      <p className="text-gray-600 text-xl font-semibold">${parseFloat(selectedBidDetails.bid_amount).toLocaleString()}</p>
                     </div>
-                  )}
+                    <div>
+                      <span className="font-medium text-gray-700">Proposed Timeline:</span>
+                      <p className="text-gray-600">{selectedBidDetails.proposed_timeline}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Submitted Date:</span>
+                      <p className="text-gray-600">{new Date(selectedBidDetails.submitted_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))
-          )}
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Proposal Description</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-700 leading-relaxed">{selectedBidDetails.description}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowBidDetailsModal(false)}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Close
+              </button>
+
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => {
+                    handleBidAction(selectedBidDetails.id, 'reject');
+                    setShowBidDetailsModal(false);
+                  }}
+                  disabled={actionLoading === selectedBidDetails.id}
+                  className="px-8 py-3 border-2 border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <X className="w-5 h-5 inline mr-2" />
+                  {actionLoading === selectedBidDetails.id ? 'Rejecting...' : 'REJECT'}
+                </button>
+                <button
+                  onClick={() => {
+                    handleBidAction(selectedBidDetails.id, 'accept');
+                    setShowBidDetailsModal(false);
+                  }}
+                  disabled={actionLoading === selectedBidDetails.id}
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium border-2 border-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle className="w-5 h-5 inline mr-2" />
+                  {actionLoading === selectedBidDetails.id ? 'Accepting...' : 'ACCEPT'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

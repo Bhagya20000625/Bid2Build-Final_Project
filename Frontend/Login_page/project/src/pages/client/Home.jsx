@@ -1,11 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Clock, DollarSign, Bell, CheckCircle, AlertCircle } from 'lucide-react';
 import SummaryCard from '../../components/client/SummaryCard';
 import ActivityTimeline from '../../components/client/ActivityTimeline';
+import userService from '../../services/userService.js';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Load user data from database
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        console.log('🔍 DEBUG: Loading user data...');
+        // First check localStorage for user ID
+        const userData = localStorage.getItem('user');
+        console.log('🔍 DEBUG: localStorage user data:', userData);
+
+        if (userData) {
+          const user = JSON.parse(userData);
+          console.log('🔍 DEBUG: Parsed user:', user);
+
+          if (user.id) {
+            console.log('🔍 DEBUG: User has ID, fetching from database...');
+            // Fetch full user data from database
+            const result = await userService.getUserProfile(user.id);
+            console.log('🔍 DEBUG: Database result:', result);
+
+            if (result.success) {
+              console.log('🔍 DEBUG: Setting user from database:', result.user);
+              setCurrentUser(result.user);
+              // Update localStorage with full user data
+              localStorage.setItem('user', JSON.stringify(result.user));
+            }
+          } else {
+            console.log('🔍 DEBUG: No user ID, using localStorage data as fallback');
+            // Use localStorage data as fallback
+            setCurrentUser(user);
+          }
+        } else {
+          console.log('🔍 DEBUG: No user data in localStorage');
+        }
+      } catch (error) {
+        console.error('🔴 ERROR loading user data:', error);
+        // Fallback to localStorage data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          setCurrentUser(JSON.parse(userData));
+        }
+      }
+    };
+
+    loadUserData();
+  }, []);
 
   const summaryData = [
     {
@@ -45,7 +93,9 @@ const Home = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, Sarah</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Welcome back, {currentUser ? currentUser.first_name || 'User' : 'User'}
+        </h1>
         <p className="text-gray-600">Here's what's happening with your projects today.</p>
       </div>
 

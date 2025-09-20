@@ -33,9 +33,76 @@ const PostProject = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Project submitted:', { formData, files });
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      // Create FormData for file uploads
+      const formDataToSend = new FormData();
+
+      // Add text fields
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('location', formData.location);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('budget_range', formData.budget);
+      formDataToSend.append('timeline', formData.timeline);
+      formDataToSend.append('needs_architect', formData.needsArchitect);
+      formDataToSend.append('customer_id', 1); // TODO: Get from auth context
+
+      // Add files if present
+      if (files.projectPlan) {
+        formDataToSend.append('projectPlan', files.projectPlan);
+      }
+
+      files.legalDocs.forEach((file, index) => {
+        formDataToSend.append('legalDocs', file);
+      });
+
+      console.log('Submitting project with data:', formData);
+
+      const response = await fetch('http://localhost:5000/api/projects', {
+        method: 'POST',
+        body: formDataToSend
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setSuccess(true);
+        // Reset form
+        setFormData({
+          title: '',
+          description: '',
+          location: '',
+          budget: '',
+          timeline: '',
+          category: '',
+          needsArchitect: false
+        });
+        setFiles({
+          projectPlan: null,
+          legalDocs: []
+        });
+        alert('Project posted successfully!');
+      } else {
+        throw new Error(result.message || 'Failed to post project');
+      }
+
+    } catch (error) {
+      console.error('Error posting project:', error);
+      setError(error.message);
+      alert(`Error posting project: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

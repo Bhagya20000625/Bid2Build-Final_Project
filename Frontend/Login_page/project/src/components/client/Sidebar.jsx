@@ -1,20 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Plus, 
-  Eye, 
-  BarChart3, 
-  CreditCard, 
-  Package, 
-  MessageCircle, 
+import {
+  Home,
+  Plus,
+  Eye,
+  BarChart3,
+  CreditCard,
+  Package,
+  MessageCircle,
   User,
   Building2,
   LogOut
 } from 'lucide-react';
+import userService from '../../services/userService.js';
 
 const Sidebar = ({ notifications }) => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: Home, to: '/customer-dashboard' },
@@ -27,13 +29,62 @@ const Sidebar = ({ notifications }) => {
     { id: 'profile', label: 'Profile', icon: User, to: '/customer-dashboard/profile' },
   ];
 
+  // Load user data from database
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        // First check localStorage for user ID
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+          if (user.id) {
+            // Fetch full user data from database
+            const result = await userService.getUserProfile(user.id);
+            if (result.success) {
+              setCurrentUser(result.user);
+            }
+          } else {
+            // Use localStorage data as fallback
+            setCurrentUser(user);
+          }
+        } else {
+          // Fallback data if no user in localStorage
+          setCurrentUser({
+            first_name: 'Guest',
+            last_name: 'User',
+            email: 'guest@example.com',
+            user_role: 'customer'
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        // Fallback to localStorage data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          setCurrentUser(JSON.parse(userData));
+        } else {
+          setCurrentUser({
+            first_name: 'Guest',
+            last_name: 'User',
+            email: 'guest@example.com',
+            user_role: 'customer'
+          });
+        }
+      }
+    };
+
+    loadUserData();
+  }, []);
+
   const handleLogout = () => {
-    // Clear any stored user data if you have any
+    // Clear user data
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     navigate('/login');
   };
 
   return (
-    <div className="w-64 bg-white shadow-lg border-r border-gray-200">
+    <div className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col h-screen">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -46,11 +97,11 @@ const Sidebar = ({ notifications }) => {
         </div>
       </div>
       
-      <nav className="mt-6">
-        <ul className="space-y-2 px-4">
+      <nav className="mt-6 flex flex-col h-full">
+        <ul className="space-y-2 px-4 flex-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            
+
             return (
               <li key={item.id}>
                 <NavLink
@@ -75,29 +126,29 @@ const Sidebar = ({ notifications }) => {
             );
           })}
         </ul>
-      </nav>
 
-      {/* User Profile & Logout */}
-      <div className="absolute bottom-4 left-4 right-4">
-        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+        {/* User Info and Logout at bottom of sidebar */}
+        <div className="px-4 pb-4 border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between text-gray-600">
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              <User className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium truncate">
+                {currentUser ?
+                  `${currentUser.first_name || 'User'} ${currentUser.last_name || ''}`.trim() ||
+                  currentUser.email || 'Guest User'
+                  : 'Loading...'}
+              </span>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Sarah Johnson</p>
-              <p className="text-xs text-gray-500">Project Owner</p>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-            title="Logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
-      </div>
+      </nav>
     </div>
   );
 };
