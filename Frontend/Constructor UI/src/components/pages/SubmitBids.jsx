@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, Calendar, FileText, Send, AlertCircle, Upload, Download, Trash2, Eye, Plus } from 'lucide-react';
 
 
@@ -10,13 +10,39 @@ const SubmitBids = () => {
   const [bidAmount, setBidAmount] = useState('');
   const [timeline, setTimeline] = useState('');
   const [proposal, setProposal] = useState('');
+  const [availableProjects, setAvailableProjects] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const availableProjects = [
-    { id: 1, title: 'Office Building Renovation', budget: '$250,000 - $300,000' },
-    { id: 2, title: 'Residential Kitchen Remodel', budget: '$45,000 - $65,000' },
-    { id: 3, title: 'Warehouse Construction', budget: '$800,000 - $1,200,000' },
-    { id: 4, title: 'School Playground Installation', budget: '$75,000 - $90,000' }
-  ];
+  // Fetch available projects from backend
+  useEffect(() => {
+    fetchAvailableProjects();
+  }, []);
+
+  const fetchAvailableProjects = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/projects/constructor', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.projects) {
+        setAvailableProjects(data.projects);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      alert('Failed to load available projects');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const activeBids = [
     { id: 1, projectTitle: 'Office Building Renovation', bidAmount: '$275,000', submittedDate: '2025-01-12', status: 'Under Review', timeline: '12 weeks' },
@@ -24,13 +50,50 @@ const SubmitBids = () => {
     { id: 3, projectTitle: 'School Playground Installation', bidAmount: '$82,000', submittedDate: '2025-01-08', status: 'Rejected', timeline: '8 weeks' }
   ];
 
-  const handleSubmitBid = (e) => {
+  const handleSubmitBid = async (e) => {
     e.preventDefault();
-    console.log('Bid submitted:', { selectedProject, bidAmount, timeline, proposal });
-    setSelectedProject('');
-    setBidAmount('');
-    setTimeline('');
-    setProposal('');
+
+    if (!selectedProject || !bidAmount || !timeline || !proposal) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Submitting bid:', { selectedProject, bidAmount, timeline, proposal });
+
+      const response = await fetch('http://localhost:5000/api/bids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          project_id: parseInt(selectedProject),
+          bidder_user_id: 1, // TODO: Get from auth context
+          bidder_role: 'constructor',
+          bid_amount: parseFloat(bidAmount.replace(/[,$]/g, '')),
+          proposed_timeline: timeline,
+          description: proposal
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert('Bid submitted successfully!');
+        setSelectedProject('');
+        setBidAmount('');
+        setTimeline('');
+        setProposal('');
+      } else {
+        throw new Error(result.message || 'Failed to submit bid');
+      }
+    } catch (error) {
+      console.error('Error submitting bid:', error);
+      alert(`Failed to submit bid: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -68,7 +131,7 @@ const SubmitBids = () => {
                 <option value="">Choose a project...</option>
                 {availableProjects.map((project) => (
                   <option key={project.id} value={project.id}>
-                    {project.title} ({project.budget})
+                    {project.title} ({project.budget_range})
                   </option>
                 ))}
               </select>

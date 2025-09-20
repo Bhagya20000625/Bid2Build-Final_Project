@@ -66,6 +66,20 @@ const ViewBids = () => {
       experience: '10+ years',
       description: 'Premium construction materials supplier with focus on steel and stone products. We guarantee quality and timely delivery.',
       pastProjects: ['Material supply for 20+ buildings', 'Infrastructure projects', 'Residential developments']
+    },
+    {
+      id: 5,
+      bidderName: 'DUMMY BID - Test Constructor',
+      bidderType: 'Contractor',
+      bidAmount: 95000,
+      proposedTimeline: '6 months',
+      rating: 5.0,
+      reviewCount: 42,
+      submittedDate: '2024-01-20',
+      status: 'pending',
+      experience: '8+ years',
+      description: 'This is a DUMMY BID for testing purposes. We offer excellent construction services with modern techniques and quality materials.',
+      pastProjects: ['Dummy Project 1', 'Test Building Complex', 'Sample Construction Work']
     }
   ];
 
@@ -179,25 +193,28 @@ const ViewBids = () => {
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors duration-200">
+              <button
+                onClick={() => console.log('View Details clicked for bid:', bid.id)}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 bg-gray-100 px-3 py-2 rounded-lg"
+              >
                 <Eye className="w-4 h-4" />
-                <span className="text-sm">View Details</span>
+                <span className="text-sm font-medium">View Details</span>
               </button>
-              
+
               <div className="flex space-x-3">
                 <button
                   onClick={() => handleBidAction(bid.id, 'reject')}
-                  className="flex items-center space-x-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-4 py-2 border-2 border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors duration-200 font-medium"
                 >
                   <X className="w-4 h-4" />
-                  <span>Reject</span>
+                  <span>REJECT</span>
                 </button>
                 <button
                   onClick={() => handleBidAction(bid.id, 'accept')}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium border-2 border-green-600"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  <span>Accept</span>
+                  <span>ACCEPT</span>
                 </button>
               </div>
             </div>

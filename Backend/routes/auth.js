@@ -25,6 +25,11 @@ router.post('/register',
   registerUser
 );
 
+// @route   POST /api/auth/login
+// @desc    Login user (all roles)
+// @access  Public
+router.post('/login', loginUser);
+
 // @route   GET /api/auth/user/:email
 // @desc    Get user by email
 // @access  Public (you may want to add authentication later)
