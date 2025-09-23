@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from '../architect/Sidebar';
 import BrowseProjects from '../../pages/architect/BrowseProjects';
+import Notifications from '../../pages/architect/Notifications';
 // Import other pages when they're copied
 // import MyProposals from '../../pages/architect/MyProposals';
 // import Messages from '../../pages/architect/Messages';
@@ -42,6 +43,7 @@ const ArchitectDashboard = () => {
       <Routes>
         <Route path="/" element={<BrowseProjects />} />
         <Route path="/proposals" element={<MyProposals />} />
+        <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/payments" element={<Payments />} />
       </Routes>

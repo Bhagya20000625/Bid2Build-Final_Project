@@ -3,35 +3,6 @@ import { Star, Clock, DollarSign, CheckCircle, X, Eye } from 'lucide-react';
 import projectService from '../../services/projectService.js';
 import bidService from '../../services/bidService.js';
 
-// DUMMY BIDS FOR TESTING - WILL REPLACE WITH REAL DATA
-const DUMMY_BIDS = [
-  {
-    id: 1001,
-    bidder_user_id: 1,
-    bidder_role: 'constructor',
-    first_name: 'DUMMY',
-    last_name: 'Constructor',
-    email: 'dummy@test.com',
-    bid_amount: '95000.00',
-    proposed_timeline: '6 months',
-    description: 'This is a DUMMY BID for testing purposes. We offer excellent construction services with modern techniques and quality materials.',
-    status: 'pending',
-    submitted_at: '2024-01-20T10:00:00Z'
-  },
-  {
-    id: 1002,
-    bidder_user_id: 2,
-    bidder_role: 'constructor',
-    first_name: 'Test',
-    last_name: 'Builder',
-    email: 'test@builder.com',
-    bid_amount: '120000.00',
-    proposed_timeline: '5 months',
-    description: 'Professional construction company with 15+ years experience. We specialize in commercial and residential projects.',
-    status: 'pending',
-    submitted_at: '2024-01-18T14:30:00Z'
-  }
-];
 
 const ViewBids = () => {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -89,17 +60,14 @@ const ViewBids = () => {
       const result = await bidService.getBidsByProject(projectId);
 
       if (result.success && result.bids) {
-        // Combine real bids with dummy bids for testing
-        setBids([...result.bids, ...DUMMY_BIDS]);
+        setBids(result.bids);
       } else {
-        // If no real bids, show dummy bids for testing
-        setBids(DUMMY_BIDS);
+        setBids([]);
       }
     } catch (error) {
       console.error('Error loading bids:', error);
-      setError('Failed to load bids - showing dummy data for testing');
-      // Show dummy bids even if API fails
-      setBids(DUMMY_BIDS);
+      setError('Failed to load bids');
+      setBids([]);
     } finally {
       setLoading(false);
     }
@@ -171,7 +139,7 @@ const ViewBids = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">{project.title}</h2>
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                    {(project.bid_count || 0) + DUMMY_BIDS.length} bids received
+                    {selectedProject === project.id ? bids.length : (project.bid_count || 0)} bids received
                   </span>
                   <span>{project.category}</span>
                   <span>{project.location}</span>
@@ -184,10 +152,11 @@ const ViewBids = () => {
                   Received Bids
                 </h3>
 
-                {DUMMY_BIDS.length === 0 ? (
-                  <p className="text-gray-500 py-4">No bids received yet for this project.</p>
-                ) : (
-                  DUMMY_BIDS.map((bid) => (
+                {selectedProject === project.id ? (
+                  bids.length === 0 ? (
+                    <p className="text-gray-500 py-4">No bids received yet for this project.</p>
+                  ) : (
+                    bids.map((bid) => (
                     <div
                       key={bid.id}
                       onClick={() => handleViewBidDetails(bid)}
@@ -228,6 +197,9 @@ const ViewBids = () => {
                       </div>
                     </div>
                   ))
+                  )
+                ) : (
+                  <p className="text-gray-500 py-4">Select this project to view its bids.</p>
                 )}
               </div>
             </div>

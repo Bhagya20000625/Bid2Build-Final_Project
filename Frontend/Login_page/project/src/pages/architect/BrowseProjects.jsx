@@ -1,13 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../components/architect/Header';
 import { MapPin, Calendar, DollarSign, Users, ArrowRight, Filter, Eye, Send } from 'lucide-react';
+import projectService from '../../services/projectService.js';
 
 const BrowseProjects = () => {
   const [filter, setFilter] = useState('all');
   const [selectedProject, setSelectedProject] = useState(null);
   const [showBidModal, setShowBidModal] = useState(false);
-  
-  const projects = [
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load projects for architects from the API
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await projectService.getProjectsForArchitects();
+
+      if (result.success) {
+        setProjects(result.projects || []);
+      } else {
+        setError(result.message || 'Failed to load projects');
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      setError('Failed to load projects. Please try again.');
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Dummy projects array for reference (keeping for now, will remove after testing)
+  const dummyProjects = [
     {
       id: 1,
       title: 'Modern Residential Complex',
@@ -86,8 +117,9 @@ const BrowseProjects = () => {
     { value: 'all', label: 'All Projects' },
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
-    { value: 'public', label: 'Public' },
-    { value: 'hospitality', label: 'Hospitality' }
+    { value: 'industrial', label: 'Industrial' },
+    { value: 'renovation', label: 'Renovation' },
+    { value: 'infrastructure', label: 'Infrastructure' }
   ];
 
   const handleViewProject = (project) => {
@@ -107,8 +139,29 @@ const BrowseProjects = () => {
       />
       
       <div className="p-8">
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={loadProjects}
+              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading projects that need architectural design...</div>
+          </div>
+        )}
+
         {/* Filters */}
-        <div className="mb-6 flex items-center justify-between">
+        {!loading && (
+          <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Filter className="w-5 h-5 text-gray-600" />
             <div className="flex space-x-2">
@@ -132,9 +185,27 @@ const BrowseProjects = () => {
             {filteredProjects.length} projects available
           </div>
         </div>
+        )}
 
         {/* Project Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {!loading && !error && (
+          <>
+            {filteredProjects.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
+                <p className="text-gray-600">
+                  {filter === 'all'
+                    ? "No projects currently need architectural design"
+                    : `No ${filter} projects need architectural design`}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
@@ -151,10 +222,14 @@ const BrowseProjects = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-blue-600 font-medium">{project.client}</p>
+                  <p className="text-blue-600 font-medium">
+                    {project.first_name && project.last_name
+                      ? `${project.first_name} ${project.last_name}`
+                      : project.email || 'Client'}
+                  </p>
                   <div className="flex items-center space-x-1">
                     <span className="text-yellow-400">★</span>
-                    <span className="text-sm text-gray-600">{project.clientInfo.rating}</span>
+                    <span className="text-sm text-gray-600">New</span>
                   </div>
                 </div>
               </div>
@@ -167,15 +242,14 @@ const BrowseProjects = () => {
                 </div>
                 <div className="flex items-center text-gray-600">
                   <DollarSign className="w-4 h-4 mr-2" />
-                  <span className="text-sm font-medium">{project.budget}</span>
+                  <span className="text-sm font-medium">{project.budget_range}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <Calendar className="w-4 h-4 mr-2" />
-                  <span className="text-sm">Deadline: {new Date(project.deadline).toLocaleDateString()}</span>
+                  <span className="text-sm">Timeline: {project.timeline}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
-                  <Users className="w-4 h-4 mr-2" />
-                  <span className="text-sm">{project.proposals} proposals submitted</span>
+                  <span className="text-sm font-medium text-blue-600">Category: {project.category}</span>
                 </div>
               </div>
 
@@ -204,6 +278,9 @@ const BrowseProjects = () => {
             </div>
           ))}
         </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Project Details Modal */}
@@ -225,27 +302,27 @@ const BrowseProjects = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-900 mb-1">Client</h3>
-                    <p className="text-blue-600">{selectedProject.clientInfo.company}</p>
-                    <p className="text-sm text-gray-600">{selectedProject.clientInfo.name}</p>
+                    <p className="text-blue-600">
+                      {selectedProject.first_name && selectedProject.last_name
+                        ? `${selectedProject.first_name} ${selectedProject.last_name}`
+                        : 'Client'}
+                    </p>
+                    <p className="text-sm text-gray-600">{selectedProject.email}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-1">Client Rating</h3>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-yellow-400">★</span>
-                      <span className="font-medium">{selectedProject.clientInfo.rating}</span>
-                      <span className="text-sm text-gray-500">(Based on previous projects)</span>
-                    </div>
+                    <h3 className="font-medium text-gray-900 mb-1">Category</h3>
+                    <p className="font-medium text-blue-600 capitalize">{selectedProject.category}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="font-medium text-gray-900 mb-1">Budget Range</h3>
-                    <p className="text-green-600 font-medium">{selectedProject.budget}</p>
+                    <p className="text-green-600 font-medium">{selectedProject.budget_range}</p>
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-1">Deadline</h3>
-                    <p className="text-gray-600">{new Date(selectedProject.deadline).toLocaleDateString()}</p>
+                    <h3 className="font-medium text-gray-900 mb-1">Timeline</h3>
+                    <p className="text-gray-600">{selectedProject.timeline}</p>
                   </div>
                 </div>
                 
@@ -255,8 +332,8 @@ const BrowseProjects = () => {
                 </div>
                 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-1">Competition</h3>
-                  <p className="text-gray-600">{selectedProject.proposals} architects have submitted proposals</p>
+                  <h3 className="font-medium text-gray-900 mb-1">Location</h3>
+                  <p className="text-gray-600">{selectedProject.location}</p>
                 </div>
               </div>
               

@@ -7,6 +7,7 @@ import ViewBids from '../../pages/client/ViewBids';
 import ProjectProgress from '../../pages/client/ProjectProgress';
 import Payments from '../../pages/client/Payments';
 import MaterialsRequest from '../../pages/client/MaterialsRequest';
+import Notifications from '../../pages/client/Notifications';
 import Messaging from '../../pages/client/Messaging';
 import Profile from '../../pages/client/Profile';
 
@@ -25,6 +26,7 @@ const CustomerDashboard = () => {
           <Route path="/project-progress" element={<ProjectProgress />} />
           <Route path="/payments" element={<div className="p-8"><Payments /></div>} />
           <Route path="/materials" element={<div className="p-8"><MaterialsRequest /></div>} />
+          <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
           <Route path="/messaging" element={<div className="p-8"><Messaging /></div>} />
           <Route path="/profile" element={<div className="p-8"><Profile /></div>} />
         </Routes>

@@ -20,6 +20,7 @@ const PostProject = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [errors, setErrors] = useState([]);
   const [success, setSuccess] = useState(false);
 
   const handleInputChange = (e) => {
@@ -42,12 +43,18 @@ const PostProject = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setErrors([]);
     setSuccess(false);
 
     try {
       // Get customer ID from localStorage (assuming it's stored during login)
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const customerId = user.customerId || user.customer_id || 1; // fallback for testing
+      const customerId = user.id || user.customerId || user.customer_id;
+
+      if (!customerId) {
+        setError('User ID not found. Please log in again.');
+        return;
+      }
 
       // Prepare project data with correct field names for backend
       const projectData = {
@@ -93,7 +100,14 @@ const PostProject = () => {
 
     } catch (error) {
       console.error('Error creating project:', error);
-      setError(error.message || 'Failed to create project. Please try again.');
+
+      // Handle validation errors from backend
+      if (error.errors && Array.isArray(error.errors)) {
+        setErrors(error.errors);
+        setError('Please fix the following errors:');
+      } else {
+        setError(error.message || 'Failed to create project. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -108,7 +122,16 @@ const PostProject = () => {
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+          <p className="text-red-800 font-medium">{error}</p>
+          {errors.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {errors.map((err, index) => (
+                <li key={index} className="text-red-700 text-sm">
+                  • <span className="font-medium">{err.field}:</span> {err.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

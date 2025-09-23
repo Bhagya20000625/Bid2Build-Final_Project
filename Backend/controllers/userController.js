@@ -1,5 +1,49 @@
 const { pool } = require('../config/database');
 
+// @desc    Get database tables (temporary for development)
+// @route   GET /api/users/debug/tables
+// @access  Public
+const getDbTables = async (req, res) => {
+  try {
+    const [tables] = await pool.execute('SHOW TABLES');
+    console.log('📋 Database tables:', tables);
+
+    // Check if notifications table exists
+    const tableNames = tables.map(t => Object.values(t)[0]);
+    const hasNotifications = tableNames.includes('notifications');
+
+    if (hasNotifications) {
+      // Get notifications table structure
+      const [columns] = await pool.execute('DESCRIBE notifications');
+      console.log('📋 Notifications table structure:', columns);
+
+      return res.json({
+        success: true,
+        tables: tableNames,
+        notificationsTable: {
+          exists: true,
+          columns: columns
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      tables: tableNames,
+      notificationsTable: {
+        exists: false
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error checking database tables:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check database tables',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Get user profile by ID
 // @route   GET /api/users/:userId
 // @access  Private
@@ -53,5 +97,6 @@ const getUserProfile = async (req, res) => {
 };
 
 module.exports = {
-  getUserProfile
+  getUserProfile,
+  getDbTables
 };

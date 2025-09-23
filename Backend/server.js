@@ -10,13 +10,14 @@ const materialRequestRoutes = require('./routes/materialRequests');
 const bidRoutes = require('./routes/bids');
 const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'], // Add your frontend URLs
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'], // Add your frontend URLs
   credentials: true
 }));
 
@@ -33,6 +34,7 @@ app.use('/api/material-requests', materialRequestRoutes);
 app.use('/api/bids', bidRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -56,6 +58,7 @@ app.get('/', (req, res) => {
       bids: '/api/bids',
       messages: '/api/messages',
       users: '/api/users',
+      notifications: '/api/notifications',
       health: '/api/health'
     }
   });

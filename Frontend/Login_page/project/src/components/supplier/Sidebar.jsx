@@ -1,29 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Package, 
-  FileText, 
-  MessageCircle, 
-  CreditCard, 
+import {
+  Home,
+  Package,
+  FileText,
+  MessageCircle,
+  CreditCard,
   User,
   Building2,
   LogOut,
-  Search
+  Search,
+  Bell
 } from 'lucide-react';
+import userService from '../../services/userService.js';
+import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 
 const Sidebar = ({ notifications }) => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
 
   const menuItems = [
     { id: 'home', label: 'Dashboard', icon: Home, to: '/supplier-dashboard' },
     { id: 'material-requests', label: 'Material Requests', icon: Search, to: '/supplier-dashboard/material-requests' },
     { id: 'quotations', label: 'My Quotations', icon: FileText, to: '/supplier-dashboard/quotations' },
     { id: 'orders', label: 'Active Orders', icon: Package, to: '/supplier-dashboard/orders' },
-    { id: 'messaging', label: 'Messages', icon: MessageCircle, to: '/supplier-dashboard/messaging', hasNotification: true },
+    { id: 'notifications', label: 'Notifications', icon: Bell, to: '/supplier-dashboard/notifications', hasNotification: true },
+    { id: 'messaging', label: 'Messages', icon: MessageCircle, to: '/supplier-dashboard/messaging' },
     { id: 'payments', label: 'Payments', icon: CreditCard, to: '/supplier-dashboard/payments' },
     { id: 'profile', label: 'Profile', icon: User, to: '/supplier-dashboard/profile' },
   ];
+
+  // Load user data from database
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+
+          // Check if user role matches supplier dashboard
+          if (user.role !== 'Supplier' && user.user_role !== 'supplier') {
+            navigate('/login');
+            return;
+          }
+
+          const userId = user.id;
+          const displayUser = {
+            id: userId,
+            first_name: user.firstName || user.first_name,
+            last_name: user.lastName || user.last_name,
+            email: user.email,
+            user_role: 'supplier'
+          };
+
+          if (userId) {
+            try {
+              const result = await userService.getUserProfile(userId);
+              if (result.success) {
+                setCurrentUser(result.user);
+                localStorage.setItem('user', JSON.stringify(result.user));
+              } else {
+                setCurrentUser(displayUser);
+              }
+            } catch (dbError) {
+              setCurrentUser(displayUser);
+            }
+          } else {
+            setCurrentUser(displayUser);
+          }
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        navigate('/login');
+      }
+    };
+
+    loadUserData();
+  }, [navigate]);
 
   const handleLogout = () => {
     // Clear stored user data
@@ -32,10 +87,6 @@ const Sidebar = ({ notifications }) => {
     localStorage.removeItem('authToken');
     navigate('/login');
   };
-
-  // Get user data from localStorage
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Supplier';
 
   return (
     <div className="w-64 bg-white shadow-lg border-r border-gray-200">
@@ -85,22 +136,33 @@ const Sidebar = ({ notifications }) => {
       {/* User Profile & Logout */}
       <div className="absolute bottom-4 left-4 right-4">
         <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{userName}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {currentUser ?
+                  `${currentUser.first_name || 'User'} ${currentUser.last_name || ''}`.trim() ||
+                  currentUser.email || 'Supplier User'
+                  : 'Loading...'}
+              </p>
               <p className="text-xs text-gray-500">Material Supplier</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-            title="Logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Notification Dropdown */}
+            {currentUser?.id && (
+              <NotificationDropdown userId={currentUser.id} />
+            )}
+            <button
+              onClick={handleLogout}
+              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

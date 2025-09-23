@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const { createBidNotification } = require('./notificationController');
 
 // Get database connection from config
 const dbConfig = {
@@ -424,14 +425,18 @@ const updateBidStatus = async (req, res) => {
       [status, id]
     );
 
-    // Get updated bid
+    // Get updated bid with project/material request details
     const [updatedBids] = await pool.execute(
       `SELECT b.*, u.first_name, u.last_name, u.email,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN p.title
                 ELSE mr.title
-              END as item_title
-       FROM bids b 
+              END as item_title,
+              CASE
+                WHEN b.project_id IS NOT NULL THEN p.title
+                ELSE mr.title
+              END as project_title
+       FROM bids b
        JOIN users u ON b.bidder_user_id = u.id
        LEFT JOIN projects p ON b.project_id = p.id
        LEFT JOIN material_requests mr ON b.material_request_id = mr.id
@@ -439,10 +444,19 @@ const updateBidStatus = async (req, res) => {
       [id]
     );
 
+    const updatedBid = updatedBids[0];
+
+    // Create notification for bid status change
+    if (status === 'accepted') {
+      await createBidNotification(updatedBid, 'bid_accepted');
+    } else if (status === 'rejected') {
+      await createBidNotification(updatedBid, 'bid_rejected');
+    }
+
     res.json({
       success: true,
       message: `Bid ${status} successfully`,
-      bid: updatedBids[0]
+      bid: updatedBid
     });
 
   } catch (error) {
