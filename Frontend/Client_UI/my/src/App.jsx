@@ -112,7 +112,7 @@ function App() {
               className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               title="Expand Sidebar"
             >
-              <ChevronRight className="w-5 h-5" />
+              <Menu className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -143,7 +143,7 @@ function App() {
                   className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   title="Collapse Sidebar"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <Menu className="w-5 h-5" />
                 </button>
               )}
             </div>
