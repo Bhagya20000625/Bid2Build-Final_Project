@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { User, MapPin, Phone, Mail, Building2, FileText, Download, Upload, Settings } from 'lucide-react';
 
-const Profile = () => {
+const Profile = ({ userProfile = null }) => {
   const [activeTab, setActiveTab] = useState('profile');
-  const [profileData, setProfileData] = useState({
+  
+  // Use passed userProfile or default data
+  const defaultProfileData = {
     name: 'Sarah Johnson',
     email: 'sarah.johnson@email.com',
     phone: '+1 (555) 123-4567',
     company: 'Johnson Construction Group',
     address: '123 Business Ave, Suite 100, New York, NY 10001',
     bio: 'Experienced project manager with over 10 years in commercial construction. Specialized in office buildings and retail spaces.'
+  };
+  
+  const [profileData, setProfileData] = useState({
+    ...defaultProfileData,
+    ...(userProfile || {})
   });
 
   const documents = [
