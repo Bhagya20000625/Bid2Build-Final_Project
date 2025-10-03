@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../../components/architect/Header';
 import { MapPin, Calendar, DollarSign, Users, ArrowRight, Filter, Eye, Send } from 'lucide-react';
 import projectService from '../../services/projectService.js';
+import bidService from '../../services/bidService.js';
 
 const BrowseProjects = () => {
   const [filter, setFilter] = useState('all');
@@ -10,6 +11,18 @@ const BrowseProjects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Bid form state
+  const [bidForm, setBidForm] = useState({
+    proposalTitle: '',
+    description: '',
+    designCost: '',
+    timeline: '',
+    supportingDocs: []
+  });
+  const [bidLoading, setBidLoading] = useState(false);
+  const [bidError, setBidError] = useState(null);
+  const [bidSuccess, setBidSuccess] = useState(false);
 
   // Load projects for architects from the API
   useEffect(() => {
@@ -37,77 +50,6 @@ const BrowseProjects = () => {
     }
   };
 
-  // Dummy projects array for reference (keeping for now, will remove after testing)
-  const dummyProjects = [
-    {
-      id: 1,
-      title: 'Modern Residential Complex',
-      client: 'Green Valley Development Corp',
-      location: 'San Francisco, CA',
-      budget: '$2.5M - $3M',
-      deadline: '2024-06-15',
-      category: 'residential',
-      description: 'Design a sustainable 50-unit residential complex with modern amenities and green spaces.',
-      proposals: 12,
-      status: 'open',
-      clientInfo: {
-        name: 'Sarah Johnson',
-        company: 'Green Valley Development Corp',
-        rating: 4.8
-      }
-    },
-    {
-      id: 2,
-      title: 'Corporate Headquarters Renovation',
-      client: 'TechCorp Industries',
-      location: 'Austin, TX',
-      budget: '$5M - $8M',
-      deadline: '2024-08-30',
-      category: 'commercial',
-      description: 'Transform existing office space into a modern, collaborative headquarters for 500 employees.',
-      proposals: 8,
-      status: 'open',
-      clientInfo: {
-        name: 'Michael Chen',
-        company: 'TechCorp Industries',
-        rating: 4.9
-      }
-    },
-    {
-      id: 3,
-      title: 'Community Arts Center',
-      client: 'City of Portland',
-      location: 'Portland, OR',
-      budget: '$1.2M - $1.8M',
-      deadline: '2024-07-20',
-      category: 'public',
-      description: 'Design a multi-purpose arts center with exhibition spaces, studios, and performance areas.',
-      proposals: 15,
-      status: 'open',
-      clientInfo: {
-        name: 'Emily Rodriguez',
-        company: 'City of Portland',
-        rating: 4.7
-      }
-    },
-    {
-      id: 4,
-      title: 'Luxury Hotel Design',
-      client: 'Oceanview Hospitality',
-      location: 'Miami, FL',
-      budget: '$10M - $15M',
-      deadline: '2024-09-15',
-      category: 'hospitality',
-      description: 'Create a 200-room luxury beachfront hotel with spa, restaurants, and conference facilities.',
-      proposals: 6,
-      status: 'open',
-      clientInfo: {
-        name: 'David Martinez',
-        company: 'Oceanview Hospitality',
-        rating: 4.6
-      }
-    }
-  ];
 
   const filteredProjects = filter === 'all' 
     ? projects 
@@ -129,6 +71,70 @@ const BrowseProjects = () => {
   const handleBidProject = (project) => {
     setSelectedProject(project);
     setShowBidModal(true);
+    // Reset form when opening
+    setBidForm({
+      proposalTitle: '',
+      description: '',
+      designCost: '',
+      timeline: '',
+      supportingDocs: []
+    });
+    setBidError(null);
+    setBidSuccess(false);
+  };
+
+  const handleBidFormChange = (field, value) => {
+    setBidForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBidSubmit = async (e) => {
+    e.preventDefault();
+    setBidLoading(true);
+    setBidError(null);
+
+    try {
+      // Get architect user ID from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const architectId = user.id;
+
+      if (!architectId) {
+        setBidError('User ID not found. Please log in again.');
+        return;
+      }
+
+      // Prepare bid data
+      const bidData = {
+        project_id: selectedProject.id,
+        bidder_user_id: architectId,
+        bidder_role: 'architect',
+        bid_amount: parseFloat(bidForm.designCost),
+        proposed_timeline: bidForm.timeline,
+        description: `${bidForm.proposalTitle}\n\n${bidForm.description}`
+      };
+
+      console.log('Submitting architect bid:', bidData);
+
+      const result = await bidService.createBid(bidData);
+
+      if (result.success) {
+        setBidSuccess(true);
+        console.log('Bid submitted successfully:', result);
+
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowBidModal(false);
+          setSelectedProject(null);
+          setBidSuccess(false);
+        }, 2000);
+      } else {
+        setBidError(result.message || 'Failed to submit bid');
+      }
+    } catch (error) {
+      console.error('Error submitting bid:', error);
+      setBidError(error.message || 'Failed to submit bid. Please try again.');
+    } finally {
+      setBidLoading(false);
+    }
   };
 
   return (
@@ -378,15 +384,34 @@ const BrowseProjects = () => {
                 </button>
               </div>
               
-              <form className="space-y-4">
+              {/* Success Message */}
+              {bidSuccess && (
+                <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">✓ Proposal submitted successfully!</p>
+                  <p className="text-green-600 text-sm">The client will review your proposal and get back to you.</p>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {bidError && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800">{bidError}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleBidSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Proposal Title
                   </label>
                   <input
                     type="text"
+                    value={bidForm.proposalTitle}
+                    onChange={(e) => handleBidFormChange('proposalTitle', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter your proposal title"
+                    required
+                    disabled={bidLoading || bidSuccess}
                   />
                 </div>
                 
@@ -396,20 +421,30 @@ const BrowseProjects = () => {
                   </label>
                   <textarea
                     rows={4}
+                    value={bidForm.description}
+                    onChange={(e) => handleBidFormChange('description', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Describe your approach and vision for this project"
+                    required
+                    disabled={bidLoading || bidSuccess}
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estimated Design Cost
+                      Estimated Design Cost ($)
                     </label>
                     <input
-                      type="text"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={bidForm.designCost}
+                      onChange={(e) => handleBidFormChange('designCost', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., $50,000"
+                      placeholder="50000"
+                      required
+                      disabled={bidLoading || bidSuccess}
                     />
                   </div>
                   <div>
@@ -418,8 +453,12 @@ const BrowseProjects = () => {
                     </label>
                     <input
                       type="text"
+                      value={bidForm.timeline}
+                      onChange={(e) => handleBidFormChange('timeline', e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g., 12 weeks"
+                      required
+                      disabled={bidLoading || bidSuccess}
                     />
                   </div>
                 </div>
@@ -438,21 +477,25 @@ const BrowseProjects = () => {
                 </div>
                 
                 <div className="flex space-x-3 pt-4">
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       setShowBidModal(false);
                       setSelectedProject(null);
+                      setBidError(null);
+                      setBidSuccess(false);
                     }}
                     className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+                    disabled={bidLoading}
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                    disabled={bidLoading || bidSuccess}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Proposal
+                    {bidLoading ? 'Submitting...' : bidSuccess ? 'Submitted!' : 'Submit Proposal'}
                   </button>
                 </div>
               </form>

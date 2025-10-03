@@ -268,21 +268,21 @@ const getCustomerBids = async (req, res) => {
 
     const [bids] = await pool.execute(
       `SELECT b.*, u.first_name, u.last_name, u.email, u.user_role,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN p.title
                 ELSE mr.title
               END as item_title,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN 'project'
                 ELSE 'material_request'
               END as bid_type
-       FROM bids b 
+       FROM bids b
        JOIN users u ON b.bidder_user_id = u.id
-       LEFT JOIN projects p ON b.project_id = p.id AND p.customer_id = ?
-       LEFT JOIN material_requests mr ON b.material_request_id = mr.id AND mr.customer_id = ?
+       LEFT JOIN projects p ON b.project_id = p.id
+       LEFT JOIN material_requests mr ON b.material_request_id = mr.id
        WHERE (p.customer_id = ? OR mr.customer_id = ?)
        ORDER BY b.submitted_at DESC`,
-      [customerId, customerId, customerId, customerId]
+      [customerId, customerId]
     );
 
     res.json({

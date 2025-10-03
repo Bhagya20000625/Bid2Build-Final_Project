@@ -44,14 +44,15 @@ const createProject = async (req, res) => {
     });
 
     // Ensure no undefined values
-    if (customer_id === undefined || title === undefined || description === undefined || 
-        location === undefined || category === undefined || budget_range === undefined || 
+    if (customer_id === undefined || title === undefined || description === undefined ||
+        location === undefined || category === undefined || budget_range === undefined ||
         timeline === undefined) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
       });
     }
+
 
     // Determine if project has plans based on uploaded files
     const hasProjectPlans = req.files && req.files.length > 0 && req.files.some(file => 

@@ -88,19 +88,11 @@ const MaterialsRequest = () => {
     try {
       // Get customer_id from localStorage or context
       console.log('💾 Reading user data from localStorage...');
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userString = localStorage.getItem('user');
+      console.log('🔍 Raw localStorage user string:', userString);
+
+      const user = JSON.parse(userString || '{}');
       const customerId = user.customer_id || user.id;
-      
-      console.log('👤 User data:', user);
-      console.log('🆔 Customer ID:', customerId);
-      console.log('🧪 Customer ID type:', typeof customerId);
-      
-      // Validate we have a customer_id
-      if (!customerId) {
-        console.error('❌ No customer ID found');
-        alert('Unable to identify customer. Please log in again.');
-        return;
-      }
       
       console.log('📝 Current form data:', newRequest);
       

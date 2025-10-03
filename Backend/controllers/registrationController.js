@@ -70,20 +70,15 @@ const registerUser = async (req, res) => {
     // Insert role-specific data
     switch (userRole.toLowerCase()) {
       case 'customer':
-        console.log('Executing customer insert with data:', { userId, location });
-        const customerQuery = `INSERT INTO customers (user_id, location, created_at) 
-           VALUES (?, ?, NOW())`;
-        console.log('Customer SQL Query:', customerQuery);
-        console.log('Customer SQL Params:', [userId, location || null]);
         await connection.execute(
-          customerQuery,
-          [userId, location || null]
+          `INSERT INTO customers (user_id, location, created_at) VALUES (?, ?, NOW())`,
+          [userId, location || 'Not specified']
         );
         break;
 
       case 'constructor':
         await connection.execute(
-          `INSERT INTO constructors (user_id, company_name, specialization, license_number, portfolio_url, created_at) 
+          `INSERT INTO constructors (user_id, company_name, specialization, license_number, portfolio_url, created_at)
            VALUES (?, ?, ?, ?, ?, NOW())`,
           [userId, companyName || null, specialization, licenseNumber, portfolioUrl || null]
         );
@@ -91,7 +86,7 @@ const registerUser = async (req, res) => {
 
       case 'supplier':
         await connection.execute(
-          `INSERT INTO suppliers (user_id, business_name, business_reg_number, service_area, created_at) 
+          `INSERT INTO suppliers (user_id, business_name, business_reg_number, service_area, created_at)
            VALUES (?, ?, ?, ?, NOW())`,
           [userId, businessName, businessRegNumber, serviceArea]
         );
@@ -99,7 +94,7 @@ const registerUser = async (req, res) => {
 
       case 'architect':
         await connection.execute(
-          `INSERT INTO architects (user_id, specialization, portfolio_url, design_software, license_number, created_at) 
+          `INSERT INTO architects (user_id, specialization, portfolio_url, design_software, license_number, created_at)
            VALUES (?, ?, ?, ?, ?, NOW())`,
           [userId, specialization, portfolioUrl || null, designSoftware || null, licenseNumber]
         );
@@ -287,10 +282,10 @@ const getUserProfile = async (req, res) => {
     switch (user.user_role) {
       case 'customer':
         const [customers] = await pool.execute(
-          'SELECT location FROM customers WHERE user_id = ?',
+          'SELECT id, location FROM customers WHERE user_id = ?',
           [userId]
         );
-        roleSpecificData = customers[0] || {};
+        roleSpecificData = { ...roleSpecificData, ...(customers[0] || {}) };
         break;
 
       case 'constructor':
@@ -298,7 +293,7 @@ const getUserProfile = async (req, res) => {
           'SELECT company_name, specialization, license_number, portfolio_url FROM constructors WHERE user_id = ?',
           [userId]
         );
-        roleSpecificData = constructors[0] || {};
+        roleSpecificData = { ...roleSpecificData, ...(constructors[0] || {}) };
         break;
 
       case 'supplier':
@@ -306,7 +301,7 @@ const getUserProfile = async (req, res) => {
           'SELECT business_name, business_reg_number, service_area FROM suppliers WHERE user_id = ?',
           [userId]
         );
-        roleSpecificData = suppliers[0] || {};
+        roleSpecificData = { ...roleSpecificData, ...(suppliers[0] || {}) };
         
         // Get materials
         const [materials] = await pool.execute(
@@ -323,7 +318,7 @@ const getUserProfile = async (req, res) => {
           'SELECT specialization, portfolio_url, design_software, license_number FROM architects WHERE user_id = ?',
           [userId]
         );
-        roleSpecificData = architects[0] || {};
+        roleSpecificData = { ...roleSpecificData, ...(architects[0] || {}) };
         break;
     }
 
@@ -335,9 +330,9 @@ const getUserProfile = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
+      user: {
         ...user,
-        roleSpecificData,
+        ...roleSpecificData,
         documents
       }
     });
@@ -396,6 +391,8 @@ const loginUser = async (req, res) => {
 
     // Get role-specific ID for customers, constructors, etc.
     let roleSpecificData = {};
+
+    // Get role-specific IDs
     if (user.user_role === 'customer') {
       const [customers] = await pool.execute(
         'SELECT id FROM customers WHERE user_id = ?',
@@ -411,6 +408,22 @@ const loginUser = async (req, res) => {
       );
       if (constructors.length > 0) {
         roleSpecificData.constructor_id = constructors[0].id;
+      }
+    } else if (user.user_role === 'architect') {
+      const [architects] = await pool.execute(
+        'SELECT id FROM architects WHERE user_id = ?',
+        [user.id]
+      );
+      if (architects.length > 0) {
+        roleSpecificData.architect_id = architects[0].id;
+      }
+    } else if (user.user_role === 'supplier') {
+      const [suppliers] = await pool.execute(
+        'SELECT id FROM suppliers WHERE user_id = ?',
+        [user.id]
+      );
+      if (suppliers.length > 0) {
+        roleSpecificData.supplier_id = suppliers[0].id;
       }
     }
 

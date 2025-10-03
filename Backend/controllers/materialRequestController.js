@@ -27,18 +27,6 @@ const createMaterialRequest = async (req, res) => {
       customer_id
     } = req.validatedData;
 
-    // Check if customer exists first
-    const [customers] = await pool.execute(
-      'SELECT id FROM customers WHERE id = ?',
-      [customer_id]
-    );
-
-    if (customers.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Customer with ID ${customer_id} does not exist. Please ensure you are logged in with a valid customer account.`
-      });
-    }
 
     // Insert material request into database
     const [result] = await pool.execute(

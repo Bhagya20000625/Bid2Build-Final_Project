@@ -45,6 +45,9 @@ const Sidebar = ({ notifications }) => {
             const result = await userService.getUserProfile(user.id);
             if (result.success) {
               setCurrentUser(result.user);
+              // Update localStorage with complete user data including customer_id
+              console.log('🔄 Updating localStorage with complete user data:', result.user);
+              localStorage.setItem('user', JSON.stringify(result.user));
             }
           } else {
             // Use localStorage data as fallback
