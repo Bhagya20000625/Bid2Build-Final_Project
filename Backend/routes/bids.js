@@ -37,10 +37,10 @@ router.get('/project/:projectId', getBidsByProject);
 // @access  Private (Customer - own requests, Supplier - can see all)
 router.get('/material-request/:materialRequestId', getBidsByMaterialRequest);
 
-// @route   GET /api/bids/customer/:customerId
+// @route   GET /api/bids/customer/:userId
 // @desc    Get all bids received by customer (for their projects and material requests)
 // @access  Private (Customer only - own bids)
-router.get('/customer/:customerId', getCustomerBids);
+router.get('/customer/:userId', getCustomerBids);
 
 // @route   GET /api/bids/bidder/:bidderId
 // @desc    Get all bids submitted by bidder

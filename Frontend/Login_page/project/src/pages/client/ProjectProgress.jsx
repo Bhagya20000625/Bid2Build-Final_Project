@@ -2,82 +2,11 @@ import React, { useState } from 'react';
 import { Calendar, CheckCircle, Clock, AlertCircle, Upload, Download } from 'lucide-react';
 
 const ProjectProgress = () => {
-  const [selectedProject, setSelectedProject] = useState('downtown-office');
+  const [selectedProject, setSelectedProject] = useState(null);
 
-  const projects = [
-    { id: 'downtown-office', name: 'Downtown Office Complex', progress: 65 },
-    { id: 'residential-project', name: 'Residential Development', progress: 40 },
-    { id: 'retail-store', name: 'Retail Store Renovation', progress: 85 }
-  ];
+  const projects = [];
 
-  const milestones = [
-    {
-      id: 1,
-      title: 'Site Preparation & Foundation',
-      description: 'Site clearance, excavation, and foundation work',
-      progress: 100,
-      status: 'completed',
-      startDate: '2024-01-01',
-      endDate: '2024-01-30',
-      photos: 3,
-      reports: 2
-    },
-    {
-      id: 2,
-      title: 'Structural Framework',
-      description: 'Steel framework and concrete structure',
-      progress: 100,
-      status: 'completed',
-      startDate: '2024-02-01',
-      endDate: '2024-03-15',
-      photos: 5,
-      reports: 3
-    },
-    {
-      id: 3,
-      title: 'Exterior & Roofing',
-      description: 'Exterior walls, windows, and roofing installation',
-      progress: 75,
-      status: 'in_progress',
-      startDate: '2024-03-16',
-      endDate: '2024-04-30',
-      photos: 8,
-      reports: 1
-    },
-    {
-      id: 4,
-      title: 'Interior Systems',
-      description: 'Electrical, plumbing, and HVAC systems',
-      progress: 25,
-      status: 'in_progress',
-      startDate: '2024-04-01',
-      endDate: '2024-05-15',
-      photos: 2,
-      reports: 1
-    },
-    {
-      id: 5,
-      title: 'Interior Finishing',
-      description: 'Flooring, painting, and interior fixtures',
-      progress: 0,
-      status: 'pending',
-      startDate: '2024-05-16',
-      endDate: '2024-06-30',
-      photos: 0,
-      reports: 0
-    },
-    {
-      id: 6,
-      title: 'Final Inspection & Handover',
-      description: 'Final inspections, testing, and project handover',
-      progress: 0,
-      status: 'pending',
-      startDate: '2024-07-01',
-      endDate: '2024-07-15',
-      photos: 0,
-      reports: 0
-    }
-  ];
+  const milestones = [];
 
   const getStatusColor = (status) => {
     switch (status) {

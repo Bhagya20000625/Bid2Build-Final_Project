@@ -35,10 +35,15 @@ const createProjectSchema = Joi.object({
   }),
   
   needs_architect: Joi.boolean().default(false),
-  customer_id: Joi.number().integer().positive().required().messages({
+
+  // Accept both customer_id and user_id for backwards compatibility
+  user_id: Joi.number().integer().positive().optional().messages({
+    'number.base': 'User ID must be a number',
+    'number.positive': 'User ID must be positive'
+  }),
+  customer_id: Joi.number().integer().positive().optional().messages({
     'number.base': 'Customer ID must be a number',
-    'number.positive': 'Customer ID must be positive',
-    'any.required': 'Customer ID is required'
+    'number.positive': 'Customer ID must be positive'
   })
 });
 
@@ -57,20 +62,35 @@ const updateProjectSchema = Joi.object({
 // Middleware to validate project creation
 const validateProject = (req, res, next) => {
   const { error, value } = createProjectSchema.validate(req.body, { abortEarly: false });
-  
+
   if (error) {
     const errors = error.details.map(detail => ({
       field: detail.path.join('.'),
       message: detail.message
     }));
-    
+
     return res.status(400).json({
       success: false,
       message: 'Validation failed',
       errors: errors
     });
   }
-  
+
+  // Handle backwards compatibility: convert customer_id to user_id
+  if (value.customer_id && !value.user_id) {
+    value.user_id = value.customer_id;
+    delete value.customer_id;
+  }
+
+  // Ensure user_id is provided
+  if (!value.user_id) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: [{ field: 'user_id', message: 'User ID is required' }]
+    });
+  }
+
   req.validatedData = value;
   next();
 };
