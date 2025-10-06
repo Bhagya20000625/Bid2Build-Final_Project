@@ -23,6 +23,7 @@ const Layout = ({ children }) => {
     { name: 'Payments', href: '/payments', icon: CreditCard },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
   ];
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
