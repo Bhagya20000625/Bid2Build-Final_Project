@@ -28,7 +28,7 @@ const createProject = async (req, res) => {
       budget_range,
       timeline,
       needs_architect,
-      customer_id
+      user_id
     } = req.validatedData;
 
     // Log received data for debugging
@@ -40,11 +40,11 @@ const createProject = async (req, res) => {
       budget_range,
       timeline,
       needs_architect,
-      customer_id
+      user_id
     });
 
     // Ensure no undefined values
-    if (customer_id === undefined || title === undefined || description === undefined ||
+    if (user_id === undefined || title === undefined || description === undefined ||
         location === undefined || category === undefined || budget_range === undefined ||
         timeline === undefined) {
       return res.status(400).json({
@@ -62,12 +62,12 @@ const createProject = async (req, res) => {
     // Insert project into database
     const [result] = await pool.execute(
       `INSERT INTO projects (
-        customer_id, title, description, location, category, 
-        budget_range, timeline, needs_architect, has_project_plans, 
+        user_id, title, description, location, category,
+        budget_range, timeline, needs_architect, has_project_plans,
         status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
       [
-        customer_id,
+        user_id,
         title,
         description,
         location,
@@ -99,7 +99,7 @@ const createProject = async (req, res) => {
               file_name, file_path, file_size, mime_type, uploaded_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [
-              customer_id,
+              user_id,
               projectId,
               fileType,
               file.originalname,
@@ -119,11 +119,9 @@ const createProject = async (req, res) => {
 
     // Get the created project with details
     const [projects] = await pool.execute(
-      `SELECT p.*, u.first_name, u.last_name, u.email 
-       FROM projects p 
-       JOIN users u ON p.customer_id = (
-         SELECT user_id FROM customers WHERE id = p.customer_id
-       )
+      `SELECT p.*, u.first_name, u.last_name, u.email
+       FROM projects p
+       JOIN users u ON p.user_id = u.id
        WHERE p.id = ?`,
       [projectId]
     );
@@ -156,8 +154,7 @@ const getAllProjects = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM projects p
-       LEFT JOIN customers c ON p.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON p.user_id = u.id
        LEFT JOIN bids b ON p.id = b.project_id
        GROUP BY p.id
        ORDER BY p.created_at DESC`
@@ -207,8 +204,7 @@ const getProjectsByRole = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM projects p
-       LEFT JOIN customers c ON p.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON p.user_id = u.id
        LEFT JOIN bids b ON p.id = b.project_id
        ${whereClause}
        GROUP BY p.id
@@ -237,20 +233,25 @@ const getProjectsByRole = async (req, res) => {
 // @access  Private (Customer only - own projects)
 const getCustomerProjects = async (req, res) => {
   try {
-    const { customerId } = req.params;
+    const { userId } = req.params;
 
     const [projects] = await pool.execute(
-      `SELECT p.*, COUNT(b.id) as bid_count
-       FROM projects p 
+      `SELECT p.*,
+              COUNT(b.id) as bid_count,
+              COUNT(CASE WHEN b.status = 'accepted' THEN 1 END) as accepted_bids,
+              COUNT(CASE WHEN b.status = 'rejected' THEN 1 END) as rejected_bids,
+              COUNT(CASE WHEN b.status = 'pending' THEN 1 END) as pending_bids
+       FROM projects p
        LEFT JOIN bids b ON p.id = b.project_id
-       WHERE p.customer_id = ?
+       WHERE p.user_id = ?
        GROUP BY p.id
        ORDER BY p.created_at DESC`,
-      [customerId]
+      [userId]
     );
 
     res.json({
       success: true,
+      userId: userId,
       count: projects.length,
       projects: projects
     });
@@ -279,8 +280,7 @@ const getProjectById = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM projects p
-       LEFT JOIN customers c ON p.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON p.user_id = u.id
        LEFT JOIN bids b ON p.id = b.project_id
        WHERE p.id = ?
        GROUP BY p.id`,
@@ -371,10 +371,8 @@ const updateProject = async (req, res) => {
     // Get updated project
     const [updatedProjects] = await pool.execute(
       `SELECT p.*, u.first_name, u.last_name, u.email 
-       FROM projects p 
-       JOIN users u ON p.customer_id = (
-         SELECT user_id FROM customers WHERE id = p.customer_id
-       )
+       FROM projects p
+       JOIN users u ON p.user_id = u.id
        WHERE p.id = ?`,
       [id]
     );

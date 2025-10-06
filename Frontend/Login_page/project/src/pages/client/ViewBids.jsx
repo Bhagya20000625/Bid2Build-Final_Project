@@ -23,42 +23,23 @@ const ViewBids = () => {
       setLoading(true);
       setError(null);
 
-      // Get customer ID from localStorage
+      // Get user ID from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       console.log('👤 User from localStorage:', user);
-      console.log('🔑 Available keys:', Object.keys(user));
 
-      // Try to get customer_id from different possible locations
-      let customerId = user.customer_id || user.id;
+      const userId = user.id;
 
-      // If user is a customer role but missing customer_id, try to fetch it
-      if (!user.customer_id && user.role === 'Customer' && user.id) {
-        console.log('⚠️ Missing customer_id for Customer role user, trying to fetch from API...');
-        try {
-          // Fetch user profile to get customer_id
-          const userService = await import('../../services/userService.js');
-          const result = await userService.default.getUserProfile(user.id);
-          if (result.success && result.user.id) {
-            customerId = result.user.id; // The customer record ID
-            console.log('✅ Fetched customer_id from API:', customerId);
-            // Update localStorage with complete data
-            localStorage.setItem('user', JSON.stringify({...user, customer_id: customerId}));
-          }
-        } catch (error) {
-          console.error('Failed to fetch customer_id:', error);
-        }
-      }
-
-      if (!customerId) {
-        console.error('❌ No customer_id found. User object:', user);
-        setError('Customer ID not found. Please log out and log back in.');
+      if (!userId) {
+        setError('User ID not found. Please log in again.');
+        setLoading(false);
         return;
       }
 
-      // Load all bids for this customer
-      const result = await bidService.getCustomerBids(customerId);
+      console.log('🔍 Fetching bids for user ID:', userId);
 
-      console.log('🔍 Customer ID used:', customerId);
+      // Load all bids for this user
+      const result = await bidService.getCustomerBids(userId);
+
       console.log('📊 API Response:', result);
 
       if (result.success && result.bids) {
@@ -181,15 +162,63 @@ const ViewBids = () => {
               </div>
 
               {/* Bids List */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                  All Received Bids
-                </h3>
+              <div className="space-y-6">
+                {/* Accepted Bids */}
+                {project.bids.filter(bid => bid.status === 'accepted').length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-green-800 border-b border-green-200 pb-2 mb-4">
+                      ✅ Accepted Bids ({project.bids.filter(bid => bid.status === 'accepted').length})
+                    </h3>
+                    <div className="space-y-4">
+                      {project.bids.filter(bid => bid.status === 'accepted').map((bid) => (
+                        <div
+                          key={bid.id}
+                          className="border border-green-200 bg-green-50 rounded-lg p-4 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h4 className="font-semibold text-gray-900">
+                                  {bid.first_name} {bid.last_name}
+                                </h4>
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  bid.bidder_role === 'architect'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {bid.bidder_role}
+                                </span>
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                  ✅ ACCEPTED
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-6 text-sm text-gray-600 mb-2">
+                                <div className="flex items-center space-x-1">
+                                  <DollarSign className="w-4 h-4 text-green-600" />
+                                  <span className="font-medium">${parseFloat(bid.bid_amount).toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  <span>{bid.proposed_timeline}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700">{bid.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {project.bids.length === 0 ? (
-                  <p className="text-gray-500 py-4">No bids received yet for this project.</p>
-                ) : (
-                  project.bids.map((bid) => (
+                {/* Pending Bids */}
+                {project.bids.filter(bid => bid.status === 'pending').length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-yellow-800 border-b border-yellow-200 pb-2 mb-4">
+                      ⏳ Pending Bids ({project.bids.filter(bid => bid.status === 'pending').length})
+                    </h3>
+                    <div className="space-y-4">
+                      {project.bids.filter(bid => bid.status === 'pending').map((bid) => (
                     <div
                       key={bid.id}
                       className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
@@ -263,7 +292,64 @@ const ViewBids = () => {
                         </div>
                       )}
                     </div>
-                  ))
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejected Bids */}
+                {project.bids.filter(bid => bid.status === 'rejected').length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-red-800 border-b border-red-200 pb-2 mb-4">
+                      ❌ Rejected Bids ({project.bids.filter(bid => bid.status === 'rejected').length})
+                    </h3>
+                    <div className="space-y-4">
+                      {project.bids.filter(bid => bid.status === 'rejected').map((bid) => (
+                        <div
+                          key={bid.id}
+                          className="border border-red-200 bg-red-50 rounded-lg p-4 opacity-75"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h4 className="font-semibold text-gray-900">
+                                  {bid.first_name} {bid.last_name}
+                                </h4>
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  bid.bidder_role === 'architect'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {bid.bidder_role}
+                                </span>
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                  ❌ REJECTED
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-6 text-sm text-gray-600 mb-2">
+                                <div className="flex items-center space-x-1">
+                                  <DollarSign className="w-4 h-4 text-green-600" />
+                                  <span className="font-medium">${parseFloat(bid.bid_amount).toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="w-4 h-4 text-blue-600" />
+                                  <span>{bid.proposed_timeline}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-700">{bid.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Bids Message */}
+                {project.bids.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No bids received yet for this project.</p>
+                  </div>
                 )}
               </div>
             </div>

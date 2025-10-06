@@ -56,7 +56,7 @@ const registerUser = async (req, res) => {
 
     // Insert user into users table (convert role to lowercase for database)
     console.log('About to insert user with data:', { email, firstName, lastName, phone, userRole: userRole.toLowerCase() });
-    const userQuery = `INSERT INTO users (email, first_name, last_name, phone, password_hash, user_role, created_at) 
+    const userQuery = `INSERT INTO users (email, first_name, last_name, phone, password, user_role, created_at)
        VALUES (?, ?, ?, ?, ?, ?, NOW())`;
     console.log('User SQL Query:', userQuery);
     const [userResult] = await connection.execute(
@@ -118,17 +118,13 @@ const registerUser = async (req, res) => {
     
     console.log('Processed files:', Object.keys(files));
 
-    // Handle customer document (saved in customers table)
+    // Handle customer document (saved in documents table)
     if (userRole.toLowerCase() === 'customer' && files.document) {
       const file = files.document[0];
       await connection.execute(
-        `UPDATE customers SET 
-         document_original_name = ?, 
-         document_file_name = ?, 
-         document_file_path = ?, 
-         document_uploaded_at = NOW() 
-         WHERE user_id = ?`,
-        [file.originalname, file.filename, file.path, userId]
+        `INSERT INTO documents (user_id, document_type, original_name, file_name, file_path, file_size, mime_type, uploaded_at)
+         VALUES (?, 'customer_document', ?, ?, ?, ?, ?, NOW())`,
+        [userId, file.originalname, file.filename, file.path, file.size, file.mimetype]
       );
       console.log('Customer document saved:', file.filename);
     }
@@ -362,7 +358,7 @@ const loginUser = async (req, res) => {
 
     // Get user from database with password hash
     const [users] = await pool.execute(
-      `SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.user_role, u.password_hash, u.is_verified 
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.user_role, u.password, u.is_verified
        FROM users u WHERE u.email = ?`,
       [email]
     );
@@ -377,7 +373,7 @@ const loginUser = async (req, res) => {
     const user = users[0];
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
       return res.status(401).json({

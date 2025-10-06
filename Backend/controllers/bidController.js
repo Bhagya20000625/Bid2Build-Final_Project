@@ -6,7 +6,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'registration_database',
+  database: process.env.DB_NAME || 'bid2build',
   port: process.env.DB_PORT || 3306
 };
 
@@ -264,7 +264,7 @@ const getBidsByMaterialRequest = async (req, res) => {
 // @access  Private (Customer only)
 const getCustomerBids = async (req, res) => {
   try {
-    const { customerId } = req.params;
+    const { userId } = req.params;
 
     const [bids] = await pool.execute(
       `SELECT b.*, u.first_name, u.last_name, u.email, u.user_role,
@@ -280,14 +280,14 @@ const getCustomerBids = async (req, res) => {
        JOIN users u ON b.bidder_user_id = u.id
        LEFT JOIN projects p ON b.project_id = p.id
        LEFT JOIN material_requests mr ON b.material_request_id = mr.id
-       WHERE (p.customer_id = ? OR mr.customer_id = ?)
+       WHERE (p.user_id = ? OR mr.user_id = ?)
        ORDER BY b.submitted_at DESC`,
-      [customerId, customerId]
+      [userId, userId]
     );
 
     res.json({
       success: true,
-      customerId: customerId,
+      userId: userId,
       count: bids.length,
       bids: bids
     });
@@ -327,11 +327,11 @@ const getBidderBids = async (req, res) => {
                 WHEN b.project_id IS NOT NULL THEN cu.last_name
                 ELSE cmu.last_name
               END as customer_last_name
-       FROM bids b 
+       FROM bids b
        LEFT JOIN projects p ON b.project_id = p.id
-       LEFT JOIN users cu ON p.customer_id = (SELECT user_id FROM customers WHERE id = p.customer_id)
+       LEFT JOIN users cu ON p.user_id = cu.id
        LEFT JOIN material_requests mr ON b.material_request_id = mr.id
-       LEFT JOIN users cmu ON mr.customer_id = (SELECT user_id FROM customers WHERE id = mr.customer_id)
+       LEFT JOIN users cmu ON mr.user_id = cmu.id
        WHERE b.bidder_user_id = ?
        ORDER BY b.submitted_at DESC`,
       [bidderId]
@@ -446,8 +446,22 @@ const updateBidStatus = async (req, res) => {
 
     const updatedBid = updatedBids[0];
 
-    // Create notification for bid status change
+    // Update project/material request status when bid is accepted
     if (status === 'accepted') {
+      if (updatedBid.project_id) {
+        // Update project status to 'awarded'
+        await pool.execute(
+          'UPDATE projects SET status = ? WHERE id = ?',
+          ['awarded', updatedBid.project_id]
+        );
+      } else if (updatedBid.material_request_id) {
+        // Update material request status to 'awarded'
+        await pool.execute(
+          'UPDATE material_requests SET status = ? WHERE id = ?',
+          ['awarded', updatedBid.material_request_id]
+        );
+      }
+
       await createBidNotification(updatedBid, 'bid_accepted');
     } else if (status === 'rejected') {
       await createBidNotification(updatedBid, 'bid_rejected');

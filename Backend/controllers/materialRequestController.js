@@ -5,7 +5,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'registration_database',
+  database: process.env.DB_NAME || 'bid2build',
   port: process.env.DB_PORT || 3306
 };
 
@@ -24,18 +24,18 @@ const createMaterialRequest = async (req, res) => {
       quantity,
       deadline,
       specifications,
-      customer_id
+      user_id
     } = req.validatedData;
 
 
     // Insert material request into database
     const [result] = await pool.execute(
       `INSERT INTO material_requests (
-        customer_id, title, category, description, quantity,
+        user_id, title, category, description, quantity,
         deadline, specifications, status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
       [
-        customer_id,
+        user_id,
         title,
         category,
         description,
@@ -54,15 +54,14 @@ const createMaterialRequest = async (req, res) => {
       });
     }
 
-    // Get the created material request with customer details
+    // Get the created material request with user details
     const [materialRequests] = await pool.execute(
       `SELECT mr.*,
               COALESCE(u.first_name, 'Unknown') as first_name,
               COALESCE(u.last_name, 'Customer') as last_name,
               COALESCE(u.email, 'unknown@example.com') as email
        FROM material_requests mr
-       LEFT JOIN customers c ON mr.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON mr.user_id = u.id
        WHERE mr.id = ?`,
       [materialRequestId]
     );
@@ -95,8 +94,7 @@ const getAllMaterialRequests = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM material_requests mr
-       LEFT JOIN customers c ON mr.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON mr.user_id = u.id
        LEFT JOIN bids b ON mr.id = b.material_request_id
        GROUP BY mr.id
        ORDER BY mr.created_at DESC`
@@ -130,8 +128,7 @@ const getMaterialRequestsForSuppliers = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM material_requests mr
-       LEFT JOIN customers c ON mr.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON mr.user_id = u.id
        LEFT JOIN bids b ON mr.id = b.material_request_id
        WHERE mr.status = 'active'
        GROUP BY mr.id
@@ -159,16 +156,16 @@ const getMaterialRequestsForSuppliers = async (req, res) => {
 // @access  Private (Customer only - own requests)
 const getCustomerMaterialRequests = async (req, res) => {
   try {
-    const { customerId } = req.params;
+    const { userId } = req.params;
 
     const [materialRequests] = await pool.execute(
       `SELECT mr.*, COUNT(b.id) as bid_count
-       FROM material_requests mr 
+       FROM material_requests mr
        LEFT JOIN bids b ON mr.id = b.material_request_id
-       WHERE mr.customer_id = ?
+       WHERE mr.user_id = ?
        GROUP BY mr.id
        ORDER BY mr.created_at DESC`,
-      [customerId]
+      [userId]
     );
 
     res.json({
@@ -201,8 +198,7 @@ const getMaterialRequestById = async (req, res) => {
               COALESCE(u.email, 'unknown@example.com') as email,
               COUNT(b.id) as bid_count
        FROM material_requests mr
-       LEFT JOIN customers c ON mr.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON mr.user_id = u.id
        LEFT JOIN bids b ON mr.id = b.material_request_id
        WHERE mr.id = ?
        GROUP BY mr.id`,
@@ -286,8 +282,7 @@ const updateMaterialRequest = async (req, res) => {
               COALESCE(u.last_name, 'Customer') as last_name,
               COALESCE(u.email, 'unknown@example.com') as email
        FROM material_requests mr
-       LEFT JOIN customers c ON mr.customer_id = c.id
-       LEFT JOIN users u ON c.user_id = u.id
+       LEFT JOIN users u ON mr.user_id = u.id
        WHERE mr.id = ?`,
       [id]
     );
