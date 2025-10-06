@@ -10,6 +10,7 @@ import Messaging from './pages/Messaging';
 import Profile from './pages/Profile';
 import { Building2, User, ChevronDown, Menu, X, Home as HomeIcon, Plus, Eye, BarChart3, CreditCard, Package, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
+
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [notifications, setNotifications] = useState(3);
@@ -27,6 +28,7 @@ function App() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
 
   // User profile data (matches the profile page data)
   const userProfile = {
@@ -60,6 +62,7 @@ function App() {
     }
   };
 
+
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
@@ -82,6 +85,7 @@ function App() {
         return <Home />;
     }
   };
+
 
   return (
     <div className="h-screen w-screen bg-gray-50 flex overflow-hidden">
