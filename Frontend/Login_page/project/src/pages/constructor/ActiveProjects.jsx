@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import bidService from '../../services/bidService.js';
 
+
 const ActiveProjects = () => {
   const [activeProjects, setActiveProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState('');
@@ -21,6 +22,7 @@ const ActiveProjects = () => {
   const [error, setError] = useState(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [selectedProjectForUpdate, setSelectedProjectForUpdate] = useState(null);
+
 
   // Form state for progress update
   const [progressForm, setProgressForm] = useState({
@@ -83,6 +85,7 @@ const ActiveProjects = () => {
     }
   };
 
+  
   const getStatusColor = (status) => {
     switch (status) {
       case 'Completed':

@@ -9,6 +9,7 @@ const Payments = () => {
     nextPayment: 12000
   };
 
+  
   const milestones = [
     {
       id: 1,

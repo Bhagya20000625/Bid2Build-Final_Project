@@ -23,6 +23,7 @@ const UpdateProgress = () => {
     }
   ];
 
+  
   const progressUpdates = [
     {
       id: 1,
