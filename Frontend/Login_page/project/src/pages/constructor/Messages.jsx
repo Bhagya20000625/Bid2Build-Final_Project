@@ -48,7 +48,7 @@ const Messages = () => {
     }
   ];
 
-  
+
   const messages = [
     {
       id: 1,
@@ -267,5 +267,6 @@ const Messages = () => {
     </div>
   );
 };
+
 
 export default Messages;
