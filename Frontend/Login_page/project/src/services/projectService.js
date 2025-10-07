@@ -46,9 +46,10 @@ const projectService = {
   },
 
   // Get projects for constructors (with plans)
-  getProjectsForConstructors: async () => {
+  getProjectsForConstructors: async (userId = null) => {
     try {
-      const response = await api.get('/projects/constructor');
+      const url = userId ? `/projects/constructor?userId=${userId}` : '/projects/constructor';
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -56,9 +57,10 @@ const projectService = {
   },
 
   // Get projects for architects (without plans, need architect)
-  getProjectsForArchitects: async () => {
+  getProjectsForArchitects: async (userId = null) => {
     try {
-      const response = await api.get('/projects/architect');
+      const url = userId ? `/projects/architect?userId=${userId}` : '/projects/architect';
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

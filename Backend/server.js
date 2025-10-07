@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -13,6 +15,14 @@ const userRoutes = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
+    credentials: true
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -77,28 +87,87 @@ app.use((error, req, res, next) => {
 
 // Handle 404 routes
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found' 
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
   });
 });
+
+// Socket.io connection handling
+const onlineUsers = new Map(); // Map<userId, socketId>
+
+io.on('connection', (socket) => {
+  console.log('👤 User connected:', socket.id);
+
+  // User joins with their ID
+  socket.on('user-online', (userId) => {
+    onlineUsers.set(userId, socket.id);
+    console.log(`✅ User ${userId} is online`);
+  });
+
+  // User sends a message
+  socket.on('send-message', (data) => {
+    const { recipientId, message } = data;
+    const recipientSocketId = onlineUsers.get(recipientId);
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('receive-message', message);
+    }
+  });
+
+  // Typing indicator
+  socket.on('typing', (data) => {
+    const { recipientId, isTyping, senderName } = data;
+    const recipientSocketId = onlineUsers.get(recipientId);
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('user-typing', { isTyping, senderName });
+    }
+  });
+
+  // Mark message as read
+  socket.on('mark-read', (data) => {
+    const { senderId, messageId } = data;
+    const senderSocketId = onlineUsers.get(senderId);
+
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('message-read', { messageId });
+    }
+  });
+
+  // User disconnects
+  socket.on('disconnect', () => {
+    // Remove user from online users
+    for (const [userId, socketId] of onlineUsers.entries()) {
+      if (socketId === socket.id) {
+        onlineUsers.delete(userId);
+        console.log(`❌ User ${userId} disconnected`);
+        break;
+      }
+    }
+  });
+});
+
+// Make io accessible to routes
+app.set('io', io);
 
 // Start server
 const startServer = async () => {
   try {
     // Test database connection
     const dbConnected = await testConnection();
-    
+
     if (!dbConnected) {
       console.error('❌ Failed to connect to database. Please check your database configuration.');
       process.exit(1);
     }
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log('🚀 Server is running on port', PORT);
       console.log(`📋 API Documentation available at: http://localhost:${PORT}`);
       console.log(`🔗 Registration endpoint: http://localhost:${PORT}/api/auth/register`);
       console.log(`💾 Uploads directory: ${path.join(__dirname, 'uploads')}`);
+      console.log('🔌 Socket.io ready for real-time messaging');
     });
 
   } catch (error) {

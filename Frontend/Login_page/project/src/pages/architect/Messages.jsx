@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Send, Paperclip } from 'lucide-react';
+import { Send, Search, Paperclip } from 'lucide-react';
 import messageService from '../../services/messageService';
 
 const Messages = () => {
-  const [selectedConversation, setSelectedConversation] = useState(null);
-  const [messageInput, setMessageInput] = useState('');
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +42,7 @@ const Messages = () => {
       last_message_time: new Date().toISOString(),
       unread_count: 0
     };
-    setSelectedConversation(newConversation);
+    setSelectedChat(newConversation);
     setMessages([]);
     setShowSuggested(false);
   };
@@ -80,27 +80,27 @@ const Messages = () => {
     }
   };
 
-  const handleSelectConversation = (conversation) => {
-    setSelectedConversation(conversation);
+  const handleSelectChat = (conversation) => {
+    setSelectedChat(conversation);
     loadMessages(conversation.other_user_id);
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedConversation || !currentUser) return;
+    if (!newMessage.trim() || !selectedChat || !currentUser) return;
 
     try {
       const messageData = {
         sender_id: currentUser.id,
-        recipient_id: selectedConversation.other_user_id,
-        message: messageInput.trim()
+        recipient_id: selectedChat.other_user_id,
+        message: newMessage.trim()
       };
 
       const response = await messageService.sendMessage(messageData);
 
       if (response.success) {
-        setMessageInput('');
-        loadMessages(selectedConversation.other_user_id);
+        setNewMessage('');
+        loadMessages(selectedChat.other_user_id);
         loadConversations(currentUser.id);
       }
     } catch (error) {
@@ -127,6 +127,8 @@ const Messages = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const selectedConversation = selectedChat;
+
   return (
     <div className="flex h-[calc(100vh-12rem)] bg-white rounded-xl shadow-sm border border-gray-200">
       <div className="w-1/3 border-r border-gray-200 flex flex-col">
@@ -137,7 +139,7 @@ const Messages = () => {
             <input
               type="text"
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
         </div>
@@ -156,16 +158,16 @@ const Messages = () => {
               <div className="max-h-48 overflow-y-auto">
                 {suggestedContacts.map((contact) => (
                   <button
-                    key={contact.contact_id}
+                    key={contact.user_id}
                     onClick={() => startConversationWithContact(contact)}
                     className="w-full p-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {contact.first_name?.substring(0, 1).toUpperCase()}{contact.last_name?.substring(0, 1).toUpperCase()}
+                      <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                        {contact.name?.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{contact.first_name} {contact.last_name}</h3>
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{contact.name}</h3>
                         <p className="text-xs text-gray-500">Client</p>
                       </div>
                     </div>
@@ -185,14 +187,14 @@ const Messages = () => {
             conversations.map((conversation) => (
               <button
                 key={conversation.other_user_id}
-                onClick={() => handleSelectConversation(conversation)}
+                onClick={() => handleSelectChat(conversation)}
                 className={`w-full p-4 text-left hover:bg-gray-50 transition-colors duration-200 border-b border-gray-100 ${
-                  selectedConversation?.other_user_id === conversation.other_user_id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+                  selectedChat?.other_user_id === conversation.other_user_id ? 'bg-purple-50 border-l-4 border-l-purple-600' : ''
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-blue-500">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-purple-600">
                       {conversation.other_user_name?.substring(0, 2).toUpperCase()}
                     </div>
                   </div>
@@ -205,12 +207,12 @@ const Messages = () => {
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-600 truncate">{conversation.last_message}</p>
                       {conversation.unread_count > 0 && (
-                        <span className="ml-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        <span className="ml-2 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                           {conversation.unread_count}
                         </span>
                       )}
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">
                       Client
                     </span>
                   </div>
@@ -228,7 +230,7 @@ const Messages = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold bg-blue-500">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold bg-purple-600">
                       {selectedConversation.other_user_name?.substring(0, 2).toUpperCase()}
                     </div>
                   </div>
@@ -251,12 +253,12 @@ const Messages = () => {
                   >
                     <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                       message.sender_id === currentUser?.id
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-purple-600 text-white'
                         : 'bg-gray-100 text-gray-900'
                     }`}>
                       <p className="text-sm">{message.message}</p>
                       <p className={`text-xs mt-1 ${
-                        message.sender_id === currentUser?.id ? 'text-blue-100' : 'text-gray-500'
+                        message.sender_id === currentUser?.id ? 'text-purple-100' : 'text-gray-500'
                       }`}>
                         {formatMessageTime(message.created_at)}
                       </p>
@@ -276,15 +278,15 @@ const Messages = () => {
                 </button>
                 <input
                   type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
                 <button
                   type="submit"
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                  disabled={!messageInput.trim()}
+                  className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                  disabled={!newMessage.trim()}
                 >
                   <Send className="w-5 h-5" />
                 </button>

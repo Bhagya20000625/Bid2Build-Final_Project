@@ -27,9 +27,13 @@ const BrowseProjects = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const result = await projectService.getProjectsForConstructors();
-      
+
+      // Get current user ID to filter out already-bid projects
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      const result = await projectService.getProjectsForConstructors(userId);
+
       if (result.success && result.projects) {
         setProjects(result.projects);
       } else {
@@ -264,9 +268,26 @@ const BrowseProjects = () => {
                 <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
                   {project.title}
                 </h3>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {project.status || 'Open'}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  {project.user_has_bid ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                      ✓ Already Bid
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {project.status || 'Open'}
+                    </span>
+                  )}
+                  {project.user_has_bid && project.user_bid_status && (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                      project.user_bid_status === 'accepted' ? 'bg-green-100 text-green-700' :
+                      project.user_bid_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {project.user_bid_status}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3 mb-6">
@@ -289,7 +310,7 @@ const BrowseProjects = () => {
               </p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200 space-x-2">
-                <button 
+                <button
                   onClick={() => handleViewDetails(project.id)}
                   className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium"
                 >
@@ -299,10 +320,15 @@ const BrowseProjects = () => {
 
                 <button
                   onClick={() => handleSubmitBid(project.id)}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                  disabled={project.user_has_bid}
+                  className={`flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg transition-colors duration-200 text-sm font-medium ${
+                    project.user_has_bid
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
                 >
                   <Send className="h-4 w-4 mr-1" />
-                  Submit Bid
+                  {project.user_has_bid ? 'Bid Submitted' : 'Submit Bid'}
                 </button>
               </div>
             </div>

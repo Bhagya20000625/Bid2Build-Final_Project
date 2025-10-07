@@ -28,31 +28,67 @@ const createBid = async (req, res) => {
       description
     } = req.validatedData;
 
-    // Check if project or material request exists
+    // Check if project or material request exists AND prevent self-bidding
     if (project_id) {
       const [projects] = await pool.execute(
-        'SELECT * FROM projects WHERE id = ? AND status = "active"',
+        'SELECT * FROM projects WHERE id = ?',
         [project_id]
       );
-      
+
       if (projects.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Project not found or not active'
+          message: 'Project not found'
+        });
+      }
+
+      const project = projects[0];
+
+      // Check if project is active
+      if (project.status !== 'active' && project.status !== '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Project is not active'
+        });
+      }
+
+      // PREVENT SELF-BIDDING: Check if bidder is the project owner
+      if (project.user_id === bidder_user_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'You cannot bid on your own project'
         });
       }
     }
 
     if (material_request_id) {
       const [materialRequests] = await pool.execute(
-        'SELECT * FROM material_requests WHERE id = ? AND status = "active"',
+        'SELECT * FROM material_requests WHERE id = ?',
         [material_request_id]
       );
-      
+
       if (materialRequests.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Material request not found or not active'
+          message: 'Material request not found'
+        });
+      }
+
+      const materialRequest = materialRequests[0];
+
+      // Check if material request is active
+      if (materialRequest.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          message: 'Material request is not active'
+        });
+      }
+
+      // PREVENT SELF-BIDDING: Check if bidder is the material request owner
+      if (materialRequest.user_id === bidder_user_id) {
+        return res.status(403).json({
+          success: false,
+          message: 'You cannot submit a quotation for your own material request'
         });
       }
     }

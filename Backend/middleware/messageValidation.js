@@ -7,27 +7,18 @@ const sendMessageSchema = Joi.object({
     'number.positive': 'Recipient ID must be positive',
     'any.required': 'Recipient ID is required'
   }),
-  
+
   sender_id: Joi.number().integer().positive().required().messages({
     'number.base': 'Sender ID must be a number',
     'number.positive': 'Sender ID must be positive',
     'any.required': 'Sender ID is required'
   }),
-  
-  project_id: Joi.number().integer().positive().optional().messages({
-    'number.base': 'Project ID must be a number',
-    'number.positive': 'Project ID must be positive'
-  }),
-  
-  subject: Joi.string().max(255).optional().allow('').messages({
-    'string.max': 'Subject must not exceed 255 characters'
-  }),
-  
+
   message: Joi.string().min(1).required().messages({
     'string.min': 'Message cannot be empty',
     'any.required': 'Message is required'
   })
-});
+}).unknown(true);
 
 // Middleware to validate message sending
 const validateMessage = (req, res, next) => {

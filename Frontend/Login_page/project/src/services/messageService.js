@@ -11,10 +11,10 @@ const messageService = {
     }
   },
 
-  // Get all messages for a user
-  getUserMessages: async (userId) => {
+  // Get all messages for a user (received or sent)
+  getUserMessages: async (userId, type = 'received') => {
     try {
-      const response = await api.get(`/messages/user/${userId}`);
+      const response = await api.get(`/messages/user/${userId}?type=${type}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -35,6 +35,16 @@ const messageService = {
   markMessageAsRead: async (messageId) => {
     try {
       const response = await api.put(`/messages/${messageId}/read`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Mark all messages in a conversation as read
+  markConversationAsRead: async (userId1, userId2) => {
+    try {
+      const response = await api.put(`/messages/conversation/${userId1}/${userId2}/read`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -68,6 +78,17 @@ const messageService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
+    }
+  },
+
+  // Get suggested conversation contacts (bidders for clients, clients for others)
+  getSuggestedContacts: async (userId) => {
+    try {
+      const response = await api.get(`/messages/suggested-contacts/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get suggested contacts error:', error);
+      throw error.response?.data || { success: false, message: 'Failed to get suggested contacts' };
     }
   }
 };

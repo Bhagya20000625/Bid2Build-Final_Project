@@ -1,108 +1,124 @@
-import React, { useState } from 'react';
-import { MessageCircle, Search, Send, Paperclip, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Send, Paperclip } from 'lucide-react';
+import messageService from '../../services/messageService';
 
 const Messaging = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [suggestedContacts, setSuggestedContacts] = useState([]);
+  const [showSuggested, setShowSuggested] = useState(false);
 
-  // Mock data - replace with actual API calls
-  const conversations = [
-    {
-      id: 1,
-      clientName: 'Johnson Construction',
-      avatar: 'JC',
-      lastMessage: 'Thank you for the quick delivery of steel beams!',
-      timestamp: '2024-01-23T10:30:00Z',
-      unreadCount: 0,
-      status: 'online',
-      projectTitle: 'Steel Beams for Framework'
-    },
-    {
-      id: 2,
-      clientName: 'ABC Builders',
-      avatar: 'AB',
-      lastMessage: 'When can you deliver the concrete mix?',
-      timestamp: '2024-01-23T09:15:00Z',
-      unreadCount: 2,
-      status: 'offline',
-      projectTitle: 'Concrete Mix & Delivery'
-    },
-    {
-      id: 3,
-      clientName: 'Metro Projects',
-      avatar: 'MP',
-      lastMessage: 'Could you provide a revised quotation?',
-      timestamp: '2024-01-22T16:45:00Z',
-      unreadCount: 1,
-      status: 'online',
-      projectTitle: 'Electrical Wiring Supplies'
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      setCurrentUser(user);
+      loadConversations(user.id);
+      loadSuggestedContacts(user.id);
     }
-  ];
+  }, []);
 
-  const messages = {
-    1: [
-      {
-        id: 1,
-        senderId: 'client',
-        senderName: 'Johnson Construction',
-        content: 'Hi, I received your quotation for the steel beams. The pricing looks good.',
-        timestamp: '2024-01-23T09:00:00Z',
-        type: 'text'
-      },
-      {
-        id: 2,
-        senderId: 'supplier',
-        senderName: 'You',
-        content: 'Thank you! I can guarantee the quality and timely delivery. When do you need them delivered?',
-        timestamp: '2024-01-23T09:05:00Z',
-        type: 'text'
-      },
-      {
-        id: 3,
-        senderId: 'client',
-        senderName: 'Johnson Construction',
-        content: 'We need them by next Friday. Can you make that deadline?',
-        timestamp: '2024-01-23T09:10:00Z',
-        type: 'text'
-      },
-      {
-        id: 4,
-        senderId: 'supplier',
-        senderName: 'You',
-        content: 'Absolutely! I can deliver them by Thursday actually. I\'ll send you the delivery schedule.',
-        timestamp: '2024-01-23T09:15:00Z',
-        type: 'text'
-      },
-      {
-        id: 5,
-        senderId: 'client',
-        senderName: 'Johnson Construction',
-        content: 'Perfect! Thank you for the quick delivery of steel beams!',
-        timestamp: '2024-01-23T10:30:00Z',
-        type: 'text'
+  const loadSuggestedContacts = async (userId) => {
+    try {
+      const response = await messageService.getSuggestedContacts(userId);
+      if (response.success) {
+        setSuggestedContacts(response.contacts || []);
       }
-    ]
+    } catch (error) {
+      console.error('Failed to load suggested contacts:', error);
+    }
+  };
+
+  const startConversationWithContact = (contact) => {
+    const newConversation = {
+      other_user_id: contact.contact_id,
+      other_user_name: `${contact.first_name} ${contact.last_name}`,
+      role: 'client',
+      last_message: '',
+      last_message_time: new Date().toISOString(),
+      unread_count: 0
+    };
+    setSelectedChat(newConversation);
+    setMessages([]);
+    setShowSuggested(false);
+  };
+
+  const loadConversations = async (userId) => {
+    try {
+      setLoading(true);
+      const response = await messageService.getUserConversations(userId);
+      if (response.success) {
+        setConversations(response.conversations || response.data || []);
+      } else {
+        setConversations([]);
+      }
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async (otherUserId) => {
+    if (!currentUser) return;
+
+    try {
+      const response = await messageService.getConversation(currentUser.id, otherUserId);
+      if (response.success) {
+        setMessages(response.messages || response.data || []);
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      setMessages([]);
+    }
+  };
+
+  const handleSelectChat = (conversation) => {
+    setSelectedChat(conversation);
+    loadMessages(conversation.other_user_id);
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedChat || !currentUser) return;
+
+    try {
+      const messageData = {
+        sender_id: currentUser.id,
+        recipient_id: selectedChat.other_user_id,
+        message: newMessage.trim()
+      };
+
+      const response = await messageService.sendMessage(messageData);
+
+      if (response.success) {
+        setNewMessage('');
+        loadMessages(selectedChat.other_user_id);
+        loadConversations(currentUser.id);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      alert('Failed to send message. Please try again.');
+    }
   };
 
   const filteredConversations = conversations.filter(conv =>
-    conv.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.projectTitle.toLowerCase().includes(searchTerm.toLowerCase())
+    conv.other_user_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleSendMessage = () => {
-    if (newMessage.trim() && selectedChat) {
-      // TODO: Implement message sending API
-      console.log('Sending message:', newMessage);
-      setNewMessage('');
-    }
-  };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else {
@@ -111,158 +127,176 @@ const Messaging = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Messages</h1>
-          <p className="text-gray-600">Communicate with your clients</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Active Conversations</p>
-          <p className="text-2xl font-bold text-green-600">{conversations.length}</p>
-        </div>
-      </div>
-
-      {/* Messaging Interface */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-[600px] flex">
-        {/* Conversations List */}
-        <div className="w-1/3 border-r border-gray-200 flex flex-col">
-          {/* Search */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              />
-            </div>
+    <div className="flex h-[calc(100vh-12rem)] bg-white rounded-xl shadow-sm border border-gray-200">
+      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-xl font-semibold text-gray-900 mb-4">Messages</h1>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
           </div>
+        </div>
 
-          {/* Conversation List */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                onClick={() => setSelectedChat(conversation)}
-                className={`p-4 cursor-pointer hover:bg-gray-50 border-b border-gray-100 ${
-                  selectedChat?.id === conversation.id ? 'bg-green-50 border-green-200' : ''
+        {/* Suggested Contacts Section */}
+        {suggestedContacts.length > 0 && (
+          <div className="border-b border-gray-200">
+            <button
+              onClick={() => setShowSuggested(!showSuggested)}
+              className="w-full p-4 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+            >
+              <span>Suggested Contacts ({suggestedContacts.length})</span>
+              <span>{showSuggested ? '▼' : '▶'}</span>
+            </button>
+            {showSuggested && (
+              <div className="max-h-48 overflow-y-auto">
+                {suggestedContacts.map((contact) => (
+                  <button
+                    key={contact.contact_id}
+                    onClick={() => startConversationWithContact(contact)}
+                    className="w-full p-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {contact.first_name?.substring(0, 1).toUpperCase()}{contact.last_name?.substring(0, 1).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{contact.first_name} {contact.last_name}</h3>
+                        <p className="text-xs text-gray-500">Client</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 text-center text-gray-500">Loading conversations...</div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">No conversations yet</div>
+          ) : (
+            filteredConversations.map((conversation) => (
+              <button
+                key={conversation.other_user_id}
+                onClick={() => handleSelectChat(conversation)}
+                className={`w-full p-4 text-left hover:bg-gray-50 transition-colors duration-200 border-b border-gray-100 ${
+                  selectedChat?.other_user_id === conversation.other_user_id ? 'bg-green-50 border-l-4 border-l-green-600' : ''
                 }`}
               >
-                <div className="flex items-start space-x-3">
+                <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {conversation.avatar}
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-green-600">
+                      {conversation.other_user_name?.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                      conversation.status === 'online' ? 'bg-green-400' : 'bg-gray-400'
-                    }`}></div>
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">
-                        {conversation.clientName}
-                      </h3>
-                      <span className="text-xs text-gray-500">{formatTime(conversation.timestamp)}</span>
+                      <h3 className="font-medium text-gray-900 truncate">{conversation.other_user_name}</h3>
+                      <span className="text-xs text-gray-500">{formatTime(conversation.last_message_time)}</span>
                     </div>
-                    <p className="text-xs text-gray-600 mb-1 truncate">{conversation.projectTitle}</p>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
-                      {conversation.unreadCount > 0 && (
-                        <span className="bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {conversation.unreadCount}
+                      <p className="text-sm text-gray-600 truncate">{conversation.last_message}</p>
+                      {conversation.unread_count > 0 && (
+                        <span className="ml-2 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {conversation.unread_count}
                         </span>
                       )}
                     </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                      Client
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              </button>
+            ))
+          )}
         </div>
+      </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedChat ? (
-            <>
-              {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="flex-1 flex flex-col">
+        {selectedChat ? (
+          <>
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {selectedChat.avatar}
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold bg-green-600">
+                      {selectedChat.other_user_name?.substring(0, 2).toUpperCase()}
+                    </div>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{selectedChat.clientName}</h3>
-                    <p className="text-sm text-gray-600">{selectedChat.projectTitle}</p>
+                    <h2 className="font-semibold text-gray-900">{selectedChat.other_user_name}</h2>
+                    <p className="text-sm text-gray-500">Client</p>
                   </div>
                 </div>
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <MoreVertical className="w-5 h-5 text-gray-500" />
-                </button>
               </div>
+            </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {(messages[selectedChat.id] || []).map((message) => (
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.length === 0 ? (
+                <div className="text-center text-gray-500">No messages yet. Start the conversation!</div>
+              ) : (
+                messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.senderId === 'supplier' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${message.sender_id === currentUser?.id ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderId === 'supplier'
+                      message.sender_id === currentUser?.id
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-100 text-gray-900'
                     }`}>
-                      <p className="text-sm">{message.content}</p>
+                      <p className="text-sm">{message.message}</p>
                       <p className={`text-xs mt-1 ${
-                        message.senderId === 'supplier' ? 'text-green-100' : 'text-gray-500'
+                        message.sender_id === currentUser?.id ? 'text-green-100' : 'text-gray-500'
                       }`}>
-                        {formatTime(message.timestamp)}
+                        {formatTime(message.created_at)}
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Message Input */}
-              <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg">
-                    <Paperclip className="w-5 h-5 text-gray-500" />
-                  </button>
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Type your message..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                    className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            /* No Chat Selected */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a conversation</h3>
-                <p className="text-gray-600">Choose a conversation from the list to start messaging</p>
-              </div>
+                ))
+              )}
             </div>
-          )}
-        </div>
+
+            <div className="p-6 border-t border-gray-200">
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <button
+                  type="submit"
+                  className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                  disabled={!newMessage.trim()}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-gray-500">Select a conversation to start messaging</p>
+          </div>
+        )}
       </div>
     </div>
   );
