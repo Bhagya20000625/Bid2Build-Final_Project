@@ -1,29 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  Building, 
-  FileText, 
-  Upload, 
-  MessageCircle, 
+import {
+  Building,
+  FileText,
+  Upload,
+  MessageCircle,
   CreditCard,
   Briefcase,
   User,
   Settings,
-  LogOut
+  LogOut,
+  Bell
 } from 'lucide-react';
+import userService from '../../services/userService.js';
+import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  
+  const [currentUser, setCurrentUser] = useState(null);
+
   const navItems = [
     { to: '/architect-dashboard', icon: Building, label: 'Browse Projects' },
     { to: '/architect-dashboard/proposals', icon: FileText, label: 'My Proposals' },
+    { to: '/architect-dashboard/notifications', icon: Bell, label: 'Notifications' },
     { to: '/architect-dashboard/messages', icon: MessageCircle, label: 'Messages' },
     { to: '/architect-dashboard/payments', icon: CreditCard, label: 'Payments' },
   ];
 
+  // Load user data from database
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          const user = JSON.parse(userData);
+
+          // Check if user role matches architect dashboard
+          if (user.role !== 'Architect' && user.user_role !== 'architect') {
+            navigate('/login');
+            return;
+          }
+
+          const userId = user.id;
+          const displayUser = {
+            id: userId,
+            first_name: user.firstName || user.first_name,
+            last_name: user.lastName || user.last_name,
+            email: user.email,
+            user_role: 'architect'
+          };
+
+          if (userId) {
+            try {
+              const result = await userService.getUserProfile(userId);
+              if (result.success) {
+                setCurrentUser(result.user);
+                localStorage.setItem('user', JSON.stringify(result.user));
+              } else {
+                setCurrentUser(displayUser);
+              }
+            } catch (dbError) {
+              setCurrentUser(displayUser);
+            }
+          } else {
+            setCurrentUser(displayUser);
+          }
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        navigate('/login');
+      }
+    };
+
+    loadUserData();
+  }, [navigate]);
+
   const handleLogout = () => {
-    // Clear any stored user data if you have any
+    // Clear any stored user data
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     navigate('/login');
   };
 
@@ -66,21 +123,34 @@ const Sidebar = () => {
 
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {currentUser ?
+                  `${currentUser.first_name || 'User'} ${currentUser.last_name || ''}`.trim() ||
+                  currentUser.email || 'Architect User'
+                  : 'Loading...'}
+              </p>
+              <p className="text-xs text-gray-500">Senior Architect</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">John Architect</p>
-            <p className="text-xs text-gray-500">Senior Architect</p>
+          <div className="flex items-center space-x-2">
+            {/* Notification Dropdown */}
+            {currentUser?.id && (
+              <NotificationDropdown userId={currentUser.id} />
+            )}
+            <button
+              onClick={handleLogout}
+              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-            title="Logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>

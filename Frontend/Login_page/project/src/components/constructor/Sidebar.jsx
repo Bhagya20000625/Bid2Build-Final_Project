@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Search,
-  TrendingUp,
+  Briefcase,
+  FileText,
+  Bell,
   CreditCard,
   MessageCircle,
   User,
@@ -17,9 +19,11 @@ const Sidebar = ({ notifications }) => {
 
   const menuItems = [
     { id: 'browse-projects', label: 'Browse Projects', icon: Search, to: '/constructor-dashboard/browse-projects' },
-    { id: 'update-progress', label: 'Update Progress', icon: TrendingUp, to: '/constructor-dashboard/update-progress' },
+    { id: 'active-projects', label: 'Active Projects', icon: Briefcase, to: '/constructor-dashboard/active-projects' },
+    { id: 'my-bids', label: 'My Bids', icon: FileText, to: '/constructor-dashboard/my-bids' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, to: '/constructor-dashboard/notifications', hasNotification: true },
     { id: 'payments', label: 'Payments', icon: CreditCard, to: '/constructor-dashboard/payments' },
-    { id: 'messages', label: 'Messages', icon: MessageCircle, to: '/constructor-dashboard/messages', hasNotification: true },
+    { id: 'messages', label: 'Messages', icon: MessageCircle, to: '/constructor-dashboard/messages' },
   ];
 
   // Load user data from database
@@ -141,7 +145,7 @@ const Sidebar = ({ notifications }) => {
 
         {/* User Info and Logout at bottom of sidebar */}
         <div className="px-4 pb-4 border-t border-gray-200 pt-4">
-          <div className="flex items-center justify-between text-gray-600">
+          <div className="flex items-center justify-between text-gray-600 mb-3">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               <User className="w-4 h-4 text-gray-500" />
               <span className="text-sm font-medium truncate">

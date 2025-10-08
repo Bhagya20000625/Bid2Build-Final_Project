@@ -7,12 +7,14 @@ import {
   BarChart3,
   CreditCard,
   Package,
+  Bell,
   MessageCircle,
   User,
   Building2,
   LogOut
 } from 'lucide-react';
 import userService from '../../services/userService.js';
+import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 
 const Sidebar = ({ notifications }) => {
   const navigate = useNavigate();
@@ -25,7 +27,8 @@ const Sidebar = ({ notifications }) => {
     { id: 'project-progress', label: 'Project Progress', icon: BarChart3, to: '/customer-dashboard/project-progress' },
     { id: 'payments', label: 'Payments', icon: CreditCard, to: '/customer-dashboard/payments' },
     { id: 'materials', label: 'Materials', icon: Package, to: '/customer-dashboard/materials' },
-    { id: 'messaging', label: 'Messages', icon: MessageCircle, to: '/customer-dashboard/messaging', hasNotification: true },
+    { id: 'notifications', label: 'Notifications', icon: Bell, to: '/customer-dashboard/notifications', hasNotification: true },
+    { id: 'messaging', label: 'Messages', icon: MessageCircle, to: '/customer-dashboard/messaging' },
     { id: 'profile', label: 'Profile', icon: User, to: '/customer-dashboard/profile' },
   ];
 
@@ -42,6 +45,9 @@ const Sidebar = ({ notifications }) => {
             const result = await userService.getUserProfile(user.id);
             if (result.success) {
               setCurrentUser(result.user);
+              // Update localStorage with complete user data including customer_id
+              console.log('🔄 Updating localStorage with complete user data:', result.user);
+              localStorage.setItem('user', JSON.stringify(result.user));
             }
           } else {
             // Use localStorage data as fallback
@@ -129,7 +135,7 @@ const Sidebar = ({ notifications }) => {
 
         {/* User Info and Logout at bottom of sidebar */}
         <div className="px-4 pb-4 border-t border-gray-200 pt-4">
-          <div className="flex items-center justify-between text-gray-600">
+          <div className="flex items-center justify-between text-gray-600 mb-3">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               <User className="w-4 h-4 text-gray-500" />
               <span className="text-sm font-medium truncate">
@@ -139,13 +145,19 @@ const Sidebar = ({ notifications }) => {
                   : 'Loading...'}
               </span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Notification Dropdown */}
+              {currentUser?.id && (
+                <NotificationDropdown userId={currentUser.id} />
+              )}
+              <button
+                onClick={handleLogout}
+                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </nav>
