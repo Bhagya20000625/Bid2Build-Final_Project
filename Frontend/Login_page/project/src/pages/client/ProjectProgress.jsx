@@ -396,6 +396,22 @@ const ProjectProgress = () => {
 
             <div className="p-6 space-y-4">
               <div>
+                <h3 className="font-medium text-gray-900 mb-2">Milestone:</h3>
+                <p className="text-gray-700">{selectedUpdate.milestone_name || 'Progress Update'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Progress Increment:</h3>
+                  <p className="text-2xl font-bold text-blue-600">{parseFloat(selectedUpdate.progress_percentage || 0).toFixed(0)}%</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Payment Amount:</h3>
+                  <p className="text-2xl font-bold text-green-600">${parseFloat(selectedUpdate.payment_amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div>
                 <h3 className="font-medium text-gray-900 mb-2">Description:</h3>
                 <p className="text-gray-700">{selectedUpdate.description}</p>
               </div>

@@ -27,6 +27,7 @@ const ActiveProjects = () => {
   const [progressForm, setProgressForm] = useState({
     milestone: '',
     progress: '',
+    paymentAmount: '',
     description: '',
     photos: []
   });
@@ -122,7 +123,8 @@ const ActiveProjects = () => {
     setSelectedProjectForUpdate(project);
     setProgressForm({
       milestone: '',
-      progress: project.progress.toString(),
+      progress: '',
+      paymentAmount: '',
       description: '',
       photos: []
     });
@@ -145,7 +147,7 @@ const ActiveProjects = () => {
         return;
       }
 
-      // Submit progress update with photos
+      // Submit progress update with photos and payment amount
       const result = await progressService.submitProgressUpdate(
         selectedProjectForUpdate.id,      // project_id
         selectedProjectForUpdate.bidId,   // bid_id
@@ -153,7 +155,8 @@ const ActiveProjects = () => {
         progressForm.description,          // description
         progressForm.photos,               // photos array
         progressForm.milestone,            // milestone name
-        progressForm.progress              // progress percentage
+        progressForm.progress,             // progress percentage
+        progressForm.paymentAmount         // payment amount
       );
 
       if (result.success) {
@@ -165,6 +168,7 @@ const ActiveProjects = () => {
         setProgressForm({
           milestone: '',
           progress: '',
+          paymentAmount: '',
           description: '',
           photos: []
         });
@@ -351,7 +355,7 @@ const ActiveProjects = () => {
 
                 <div>
                   <label htmlFor="progress-percent" className="block text-sm font-medium text-gray-700 mb-2">
-                    Overall Progress (%)
+                    Progress Increment (%)
                   </label>
                   <input
                     type="number"
@@ -365,6 +369,26 @@ const ActiveProjects = () => {
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="payment-amount" className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Amount for this Milestone ($)
+                </label>
+                <input
+                  type="number"
+                  id="payment-amount"
+                  min="0"
+                  step="0.01"
+                  value={progressForm.paymentAmount}
+                  onChange={(e) => setProgressForm(prev => ({ ...prev, paymentAmount: e.target.value }))}
+                  placeholder="Enter payment amount (e.g., 5000)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Specify the amount you expect to be paid for completing this milestone
+                </p>
               </div>
 
               <div>

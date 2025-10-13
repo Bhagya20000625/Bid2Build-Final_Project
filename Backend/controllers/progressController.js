@@ -24,13 +24,15 @@ const submitProgressUpdate = async (req, res) => {
       submitted_by,
       description,
       milestone_name,
-      progress_percentage
+      progress_percentage,
+      payment_amount
     } = req.body;
 
     console.log('📊 Received progress update:', {
       project_id,
       milestone_name,
-      progress_percentage
+      progress_percentage,
+      payment_amount
     });
 
     // Validate required fields
@@ -62,9 +64,9 @@ const submitProgressUpdate = async (req, res) => {
     // Insert progress update
     const [result] = await pool.execute(
       `INSERT INTO progress_updates (
-        project_id, bid_id, submitted_by, description, milestone_name, progress_percentage, status, submitted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'pending_review', NOW())`,
-      [project_id, bid_id, submitted_by, description, milestone_name || 'Progress Update', parseFloat(progress_percentage) || 0]
+        project_id, bid_id, submitted_by, description, milestone_name, progress_percentage, payment_amount, status, submitted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_review', NOW())`,
+      [project_id, bid_id, submitted_by, description, milestone_name || 'Progress Update', parseFloat(progress_percentage) || 0, parseFloat(payment_amount) || 0]
     );
 
     console.log('✅ Progress update created with ID:', result.insertId);
@@ -255,6 +257,14 @@ const reviewProgressUpdate = async (req, res) => {
 
     const progressUpdate = progressUpdates[0];
 
+    console.log('📋 Progress Update Data Retrieved:', {
+      id: progressUpdate.id,
+      project_id: progressUpdate.project_id,
+      milestone_name: progressUpdate.milestone_name,
+      progress_percentage: progressUpdate.progress_percentage,
+      status: progressUpdate.status
+    });
+
     // Verify reviewer is the project owner
     if (progressUpdate.client_id !== reviewed_by) {
       return res.status(403).json({
@@ -271,19 +281,31 @@ const reviewProgressUpdate = async (req, res) => {
       [status, reviewed_by, review_comments || null, id]
     );
 
-    // If approved, update project's overall_progress
+    // If approved, update project's overall_progress (cumulative/additive)
     if (status === 'approved') {
-      console.log('🔄 Updating project overall_progress:', {
+      // Get current overall_progress
+      const [currentProject] = await pool.execute(
+        'SELECT overall_progress FROM projects WHERE id = ?',
+        [progressUpdate.project_id]
+      );
+
+      const currentProgress = parseFloat(currentProject[0].overall_progress || 0);
+      const progressToAdd = parseFloat(progressUpdate.progress_percentage || 0);
+      const newProgress = Math.min(currentProgress + progressToAdd, 100); // Cap at 100%
+
+      console.log('🔄 Updating project overall_progress (CUMULATIVE):', {
         project_id: progressUpdate.project_id,
-        new_progress: progressUpdate.progress_percentage,
-        type: typeof progressUpdate.progress_percentage
+        current_progress: currentProgress,
+        progress_to_add: progressToAdd,
+        new_total_progress: newProgress,
+        capped_at_100: newProgress === 100 && (currentProgress + progressToAdd) > 100
       });
 
       const [updateResult] = await pool.execute(
         `UPDATE projects
          SET overall_progress = ?
          WHERE id = ?`,
-        [progressUpdate.progress_percentage, progressUpdate.project_id]
+        [newProgress, progressUpdate.project_id]
       );
 
       console.log('✅ Project overall_progress update result:', {
