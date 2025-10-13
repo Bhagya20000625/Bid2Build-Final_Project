@@ -11,12 +11,14 @@ import {
   MessageCircle,
   User,
   Building2,
-  LogOut
+  LogOut,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import userService from '../../services/userService.js';
 import NotificationDropdown from '../notifications/NotificationDropdown.jsx';
 
-const Sidebar = ({ notifications }) => {
+const Sidebar = ({ notifications, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -90,16 +92,31 @@ const Sidebar = ({ notifications }) => {
   };
 
   return (
-    <div className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col h-screen">
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg border-r border-gray-200 flex flex-col h-screen transition-all duration-300 relative`}>
+      {/* Toggle Button - Positioned in the middle */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white border border-gray-300 rounded-full p-1 shadow-md hover:shadow-lg transition-shadow z-10"
+        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="w-4 h-4 text-gray-600" />
+        ) : (
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+        )}
+      </button>
+
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Bid2Build</h2>
-            <p className="text-sm text-gray-500">Client Dashboard</p>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Bid2Build</h2>
+              <p className="text-sm text-gray-500">Client Dashboard</p>
+            </div>
+          )}
         </div>
       </div>
       
@@ -113,18 +130,28 @@ const Sidebar = ({ notifications }) => {
                 <NavLink
                   to={item.to}
                   className={({ isActive }) =>
-                    `w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                    `w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-lg transition-colors duration-200 relative ${
                       isActive
                         ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`
                   }
+                  title={isCollapsed ? item.label : ''}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
-                  {item.hasNotification && notifications > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {notifications}
+                  <Icon className={`${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                  {!isCollapsed && (
+                    <>
+                      <span className="font-medium">{item.label}</span>
+                      {item.hasNotification && notifications > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {notifications}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {isCollapsed && item.hasNotification && notifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {notifications > 9 ? '9+' : notifications}
                     </span>
                   )}
                 </NavLink>
@@ -134,31 +161,49 @@ const Sidebar = ({ notifications }) => {
         </ul>
 
         {/* User Info and Logout at bottom of sidebar */}
-        <div className="px-4 pb-4 border-t border-gray-200 pt-4">
-          <div className="flex items-center justify-between text-gray-600 mb-3">
-            <div className="flex items-center space-x-2 flex-1 min-w-0">
-              <User className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium truncate">
-                {currentUser ?
-                  `${currentUser.first_name || 'User'} ${currentUser.last_name || ''}`.trim() ||
-                  currentUser.email || 'Guest User'
-                  : 'Loading...'}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              {/* Notification Dropdown */}
+        <div className={`px-4 pb-4 border-t border-gray-200 pt-4 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+          {isCollapsed ? (
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-gray-600" />
+              </div>
               {currentUser?.id && (
                 <NotificationDropdown userId={currentUser.id} />
               )}
               <button
                 onClick={handleLogout}
-                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-50"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between text-gray-600 mb-3">
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium truncate">
+                  {currentUser ?
+                    `${currentUser.first_name || 'User'} ${currentUser.last_name || ''}`.trim() ||
+                    currentUser.email || 'Guest User'
+                    : 'Loading...'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                {/* Notification Dropdown */}
+                {currentUser?.id && (
+                  <NotificationDropdown userId={currentUser.id} />
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
     </div>
