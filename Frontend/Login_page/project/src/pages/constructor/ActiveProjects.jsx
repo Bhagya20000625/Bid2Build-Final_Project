@@ -13,6 +13,7 @@ import {
   Eye
 } from 'lucide-react';
 import bidService from '../../services/bidService.js';
+import progressService from '../../services/progressService.js';
 
 const ActiveProjects = () => {
   const [activeProjects, setActiveProjects] = useState([]);
@@ -53,23 +54,29 @@ const ActiveProjects = () => {
       const result = await bidService.getBidderBids(constructorId);
 
       if (result.success && result.bids) {
+        console.log('📊 Constructor - All bids received:', result.bids);
+
         // Filter only accepted bids and format for display
         const acceptedBids = result.bids
           .filter(bid => bid.status === 'accepted')
-          .map(bid => ({
-            id: bid.project_id,
-            bidId: bid.id,
-            title: bid.item_title || bid.project_title || 'Untitled Project',
-            customer: `${bid.customer_first_name || ''} ${bid.customer_last_name || ''}`.trim() || 'Unknown Customer',
-            customerEmail: bid.customer_email || 'No email',
-            bidAmount: parseFloat(bid.bid_amount || 0),
-            timeline: bid.proposed_timeline || 'Not specified',
-            status: 'In Progress', // Default status for accepted projects
-            progress: 0, // TODO: Get from progress updates
-            startDate: bid.accepted_at || bid.submitted_at,
-            description: bid.description || 'No description available'
-          }));
+          .map(bid => {
+            console.log(`📊 Bid for project "${bid.project_title}": overall_progress=${bid.overall_progress}`);
+            return {
+              id: bid.project_id,
+              bidId: bid.id,
+              title: bid.item_title || bid.project_title || 'Untitled Project',
+              customer: `${bid.customer_first_name || ''} ${bid.customer_last_name || ''}`.trim() || 'Unknown Customer',
+              customerEmail: bid.customer_email || 'No email',
+              bidAmount: parseFloat(bid.bid_amount || 0),
+              timeline: bid.proposed_timeline || 'Not specified',
+              status: 'In Progress', // Default status for accepted projects
+              progress: parseFloat(bid.overall_progress || 0), // Get from project's overall_progress field
+              startDate: bid.accepted_at || bid.submitted_at,
+              description: bid.description || 'No description available'
+            };
+          });
 
+        console.log('✅ Constructor - Formatted active projects:', acceptedBids);
         setActiveProjects(acceptedBids);
       } else {
         setActiveProjects([]);
@@ -122,18 +129,55 @@ const ActiveProjects = () => {
     setShowProgressModal(true);
   };
 
-  const handleProgressSubmit = (e) => {
+  const handleProgressSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement progress update API call
-    console.log('Progress update for project:', selectedProjectForUpdate.id);
-    console.log('Progress data:', progressForm);
 
-    // For now, just close the modal
-    setShowProgressModal(false);
-    setSelectedProjectForUpdate(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    // TODO: Reload projects to show updated progress
-    // loadActiveProjects();
+      // Get user from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      if (!userId) {
+        setError('User not found. Please log in again.');
+        return;
+      }
+
+      // Submit progress update with photos
+      const result = await progressService.submitProgressUpdate(
+        selectedProjectForUpdate.id,      // project_id
+        selectedProjectForUpdate.bidId,   // bid_id
+        userId,                            // submitted_by
+        progressForm.description,          // description
+        progressForm.photos,               // photos array
+        progressForm.milestone,            // milestone name
+        progressForm.progress              // progress percentage
+      );
+
+      if (result.success) {
+        alert('Progress update submitted successfully!');
+
+        // Close modal and reset form
+        setShowProgressModal(false);
+        setSelectedProjectForUpdate(null);
+        setProgressForm({
+          milestone: '',
+          progress: '',
+          description: '',
+          photos: []
+        });
+
+        // Reload projects to show updated data
+        await loadActiveProjects();
+      }
+    } catch (error) {
+      console.error('Submit progress error:', error);
+      setError(error.message || 'Failed to submit progress update. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFileChange = (e) => {

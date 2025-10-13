@@ -68,7 +68,23 @@ const BrowseProjects = () => {
     try {
       // Get user data from localStorage (assuming constructor is logged in)
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const bidderId = user.id || 1; // fallback for testing
+      const bidderId = user.id;
+
+      // DEBUG: Log what we're sending
+      console.log('🔍 User from localStorage:', user);
+      console.log('🔍 Bidder ID:', bidderId);
+      console.log('🔍 Selected Project:', selectedProject);
+      console.log('🔍 Project Owner ID:', selectedProject.user_id);
+
+      if (!bidderId) {
+        alert('Error: User ID not found. Please log in again.');
+        return;
+      }
+
+      if (selectedProject.user_id === bidderId) {
+        alert('⚠️ You cannot bid on your own project! Please use a different account.');
+        return;
+      }
 
       const bidData = {
         project_id: selectedProject.id,
@@ -78,6 +94,8 @@ const BrowseProjects = () => {
         proposed_timeline: bidFormData.proposed_timeline,
         description: bidFormData.description
       };
+
+      console.log('📤 Sending bid data:', bidData);
 
       const result = await bidService.createBid(bidData);
       

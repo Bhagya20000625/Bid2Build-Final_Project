@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'http://localhost:5000';
 
-export const useSocket = (userId, onReceiveMessage, onMessageRead, onTyping) => {
+export const useSocket = (userId, onReceiveMessage, onMessageRead, onTyping, onNewNotification) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -61,13 +61,23 @@ export const useSocket = (userId, onReceiveMessage, onMessageRead, onTyping) => 
       });
     }
 
+    // Notification event handler
+    if (onNewNotification) {
+      socket.on('new-notification', (data) => {
+        if (data.userId === userId) {
+          console.log('🔔 New notification received:', data.notification);
+          onNewNotification(data.notification);
+        }
+      });
+    }
+
     // Cleanup on unmount
     return () => {
       if (socket) {
         socket.disconnect();
       }
     };
-  }, [userId, onReceiveMessage, onMessageRead, onTyping]);
+  }, [userId, onReceiveMessage, onMessageRead, onTyping, onNewNotification]);
 
   // Send message via socket
   const sendMessage = (recipientId, message) => {

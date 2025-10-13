@@ -8,7 +8,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'registration_database',
+  database: process.env.DB_NAME || 'bid2build',
   port: process.env.DB_PORT || 3306
 };
 
@@ -276,7 +276,8 @@ const getProjectsByRole = async (req, res) => {
 // @access  Private (Customer only - own projects)
 const getCustomerProjects = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { customerId } = req.params;
+    const userId = customerId; // Match route parameter name
 
     const [projects] = await pool.execute(
       `SELECT p.*,
@@ -287,7 +288,7 @@ const getCustomerProjects = async (req, res) => {
        FROM projects p
        LEFT JOIN bids b ON p.id = b.project_id
        WHERE p.user_id = ?
-       GROUP BY p.id
+       GROUP BY p.id, p.awarded_bid_id
        ORDER BY p.created_at DESC`,
       [userId]
     );

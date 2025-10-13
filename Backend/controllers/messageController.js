@@ -89,17 +89,49 @@ const sendMessage = async (req, res) => {
 
     // Get the created message with sender and recipient details
     const [messages] = await pool.execute(
-      `SELECT m.*, 
+      `SELECT m.*,
               s.first_name as sender_first_name, s.last_name as sender_last_name,
               r.first_name as recipient_first_name, r.last_name as recipient_last_name,
               p.title as project_title
-       FROM messages m 
+       FROM messages m
        JOIN users s ON m.sender_id = s.id
        JOIN users r ON m.recipient_id = r.id
        LEFT JOIN projects p ON m.project_id = p.id
        WHERE m.id = ?`,
       [messageId]
     );
+
+    // Create notification for message recipient
+    try {
+      const io = req.app.get('io');
+      const notificationTitle = '💬 New Message';
+      const notificationMessage = `You have a new message from ${senders[0].first_name} ${senders[0].last_name}`;
+
+      await pool.execute(
+        `INSERT INTO notifications (user_id, type, title, message)
+         VALUES (?, ?, ?, ?)`,
+        [recipient_id, 'new_message', notificationTitle, notificationMessage]
+      );
+
+      // Emit Socket.io event for real-time notification
+      if (io) {
+        const [newNotifications] = await pool.execute(
+          'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+          [recipient_id]
+        );
+
+        if (newNotifications.length > 0) {
+          io.emit('new-notification', {
+            userId: recipient_id,
+            notification: newNotifications[0]
+          });
+          console.log(`🔔 Message notification sent to user ${recipient_id}`);
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to create message notification:', notifError);
+      // Don't fail the message send if notification fails
+    }
 
     res.status(201).json({
       success: true,

@@ -13,6 +13,8 @@ const bidRoutes = require('./routes/bids');
 const messageRoutes = require('./routes/messages');
 const userRoutes = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
+const progressRoutes = require('./routes/progress');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +47,8 @@ app.use('/api/bids', bidRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -69,6 +73,8 @@ app.get('/', (req, res) => {
       messages: '/api/messages',
       users: '/api/users',
       notifications: '/api/notifications',
+      progress: '/api/progress',
+      payments: '/api/payments',
       health: '/api/health'
     }
   });

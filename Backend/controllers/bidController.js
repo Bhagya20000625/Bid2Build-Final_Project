@@ -133,14 +133,18 @@ const createBid = async (req, res) => {
 
     const bidId = result.insertId;
 
-    // Get the created bid with bidder details
+    // Get the created bid with bidder details and owner info
     const [bids] = await pool.execute(
       `SELECT b.*, u.first_name, u.last_name, u.email,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN p.title
                 ELSE mr.title
-              END as item_title
-       FROM bids b 
+              END as item_title,
+              CASE
+                WHEN b.project_id IS NOT NULL THEN p.user_id
+                ELSE mr.user_id
+              END as owner_id
+       FROM bids b
        JOIN users u ON b.bidder_user_id = u.id
        LEFT JOIN projects p ON b.project_id = p.id
        LEFT JOIN material_requests mr ON b.material_request_id = mr.id
@@ -148,10 +152,44 @@ const createBid = async (req, res) => {
       [bidId]
     );
 
+    const createdBid = bids[0];
+
+    // Create notification for project/material request owner
+    try {
+      const io = req.app.get('io');
+      const notificationTitle = '💼 New Bid Received';
+      const notificationMessage = `${createdBid.first_name} ${createdBid.last_name} submitted a bid for "${createdBid.item_title}". Amount: $${parseFloat(createdBid.bid_amount).toLocaleString()}`;
+
+      await pool.execute(
+        `INSERT INTO notifications (user_id, type, title, message)
+         VALUES (?, ?, ?, ?)`,
+        [createdBid.owner_id, 'new_bid', notificationTitle, notificationMessage]
+      );
+
+      // Emit Socket.io event for real-time notification
+      if (io) {
+        const [newNotifications] = await pool.execute(
+          'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+          [createdBid.owner_id]
+        );
+
+        if (newNotifications.length > 0) {
+          io.emit('new-notification', {
+            userId: createdBid.owner_id,
+            notification: newNotifications[0]
+          });
+          console.log(`🔔 New bid notification sent to user ${createdBid.owner_id}`);
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to create bid notification:', notifError);
+      // Don't fail the bid submission if notification fails
+    }
+
     res.status(201).json({
       success: true,
       message: 'Bid submitted successfully',
-      bid: bids[0]
+      bid: createdBid
     });
 
   } catch (error) {
@@ -347,22 +385,28 @@ const getBidderBids = async (req, res) => {
 
     const [bids] = await pool.execute(
       `SELECT b.*,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN p.title
                 ELSE mr.title
               END as item_title,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN 'project'
                 ELSE 'material_request'
               END as bid_type,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN cu.first_name
                 ELSE cmu.first_name
               END as customer_first_name,
-              CASE 
+              CASE
                 WHEN b.project_id IS NOT NULL THEN cu.last_name
                 ELSE cmu.last_name
-              END as customer_last_name
+              END as customer_last_name,
+              CASE
+                WHEN b.project_id IS NOT NULL THEN cu.email
+                ELSE cmu.email
+              END as customer_email,
+              p.overall_progress,
+              p.title as project_title
        FROM bids b
        LEFT JOIN projects p ON b.project_id = p.id
        LEFT JOIN users cu ON p.user_id = cu.id
@@ -485,10 +529,10 @@ const updateBidStatus = async (req, res) => {
     // Update project/material request status when bid is accepted
     if (status === 'accepted') {
       if (updatedBid.project_id) {
-        // Update project status to 'awarded'
+        // Update project status to 'in_progress' and set awarded_bid_id
         await pool.execute(
-          'UPDATE projects SET status = ? WHERE id = ?',
-          ['awarded', updatedBid.project_id]
+          'UPDATE projects SET status = ?, awarded_bid_id = ? WHERE id = ?',
+          ['in_progress', id, updatedBid.project_id]
         );
       } else if (updatedBid.material_request_id) {
         // Update material request status to 'awarded'
@@ -498,9 +542,13 @@ const updateBidStatus = async (req, res) => {
         );
       }
 
-      await createBidNotification(updatedBid, 'bid_accepted');
+      // Get Socket.io instance and send notification
+      const io = req.app.get('io');
+      await createBidNotification(updatedBid, 'bid_accepted', io);
     } else if (status === 'rejected') {
-      await createBidNotification(updatedBid, 'bid_rejected');
+      // Get Socket.io instance and send notification
+      const io = req.app.get('io');
+      await createBidNotification(updatedBid, 'bid_rejected', io);
     }
 
     res.json({
