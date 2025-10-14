@@ -1,54 +1,59 @@
-import React, { useState } from 'react';
-import { FileText, Clock, CheckCircle, XCircle, Eye, Edit, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Clock, CheckCircle, XCircle, Eye, Trash2 } from 'lucide-react';
+import bidService from '../../services/bidService';
 
 const Quotations = () => {
   const [activeTab, setActiveTab] = useState('all');
-  
-  // Mock data - replace with actual API calls
-  const quotations = [
-    {
-      id: 1,
-      materialRequestId: 1,
-      materialRequestTitle: 'Steel Beams for Framework',
-      clientName: 'Johnson Construction',
-      pricePerUnit: 900,
-      totalCost: 45000,
-      deliveryTimeline: '2 weeks',
-      status: 'pending',
-      submittedAt: '2024-01-21T10:00:00Z',
-      respondedAt: null,
-      discountPercentage: 5,
-      notes: 'Premium quality steel beams with free delivery within 50 miles'
-    },
-    {
-      id: 2,
-      materialRequestId: 2,
-      materialRequestTitle: 'Concrete Mix & Delivery',
-      clientName: 'ABC Builders',
-      pricePerUnit: 95,
-      totalCost: 19000,
-      deliveryTimeline: '3 days',
-      status: 'accepted',
-      submittedAt: '2024-01-19T14:30:00Z',
-      respondedAt: '2024-01-20T09:15:00Z',
-      discountPercentage: 0,
-      notes: 'On-time delivery guarantee with custom mix designs'
-    },
-    {
-      id: 3,
-      materialRequestId: 3,
-      materialRequestTitle: 'Electrical Wiring Supplies',
-      clientName: 'Metro Projects',
-      pricePerUnit: 15,
-      totalCost: 7500,
-      deliveryTimeline: '1 week',
-      status: 'rejected',
-      submittedAt: '2024-01-15T16:20:00Z',
-      respondedAt: '2024-01-18T11:30:00Z',
-      discountPercentage: 10,
-      notes: 'Bulk discount available for larger orders'
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(null);
+
+  useEffect(() => {
+    loadQuotations();
+  }, []);
+
+  const loadQuotations = async () => {
+    try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const data = await bidService.getBidderBids(user.id);
+
+      // Filter only material request quotations
+      const materialQuotations = data.bids?.filter(bid => bid.bid_type === 'material_request') || [];
+      setQuotations(materialQuotations);
+    } catch (error) {
+      console.error('Failed to load quotations:', error);
+      setQuotations([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleViewDetails = (quotation) => {
+    setSelectedQuotation(quotation);
+    setShowDetailsModal(true);
+  };
+
+
+  const handleWithdraw = async (quotationId) => {
+    if (!confirm('Are you sure you want to withdraw this quotation? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setWithdrawing(quotationId);
+      await bidService.deleteBid(quotationId);
+      alert('Quotation withdrawn successfully');
+      loadQuotations(); // Refresh the list
+    } catch (error) {
+      console.error('Failed to withdraw quotation:', error);
+      alert('Failed to withdraw quotation');
+    } finally {
+      setWithdrawing(null);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -164,7 +169,12 @@ const Quotations = () => {
 
         {/* Quotations List */}
         <div className="p-6">
-          {filteredQuotations.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-600 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading quotations...</p>
+            </div>
+          ) : filteredQuotations.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No quotations found</h3>
@@ -182,54 +192,38 @@ const Quotations = () => {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <FileText className="w-5 h-5 text-green-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">{quotation.materialRequestTitle}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{quotation.item_title}</h3>
                         <span className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(quotation.status)}`}>
                           {getStatusIcon(quotation.status)}
                           <span className="ml-1">{quotation.status}</span>
                         </span>
                       </div>
                       
-                      <p className="text-gray-600 mb-3">Client: {quotation.clientName}</p>
+                      <p className="text-gray-600 mb-3">Client: {quotation.customer_first_name} {quotation.customer_last_name}</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-gray-900">Price per Unit:</span>
-                          <p className="text-lg font-semibold text-green-600">${quotation.pricePerUnit}</p>
-                        </div>
-                        <div>
                           <span className="font-medium text-gray-900">Total Cost:</span>
-                          <p className="text-lg font-semibold text-green-600">${quotation.totalCost.toLocaleString()}</p>
+                          <p className="text-lg font-semibold text-green-600">${quotation.bid_amount}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-900">Delivery:</span>
-                          <p className="text-gray-600">{quotation.deliveryTimeline}</p>
+                          <span className="font-medium text-gray-900">Timeline:</span>
+                          <p className="text-gray-600">{quotation.proposed_timeline}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-900">Submitted:</span>
-                          <p className="text-gray-600">{new Date(quotation.submittedAt).toLocaleDateString()}</p>
+                          <p className="text-gray-600">{new Date(quotation.submitted_at).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-900">Status:</span>
+                          <p className="text-gray-600 capitalize">{quotation.status}</p>
                         </div>
                       </div>
 
-                      {quotation.discountPercentage > 0 && (
-                        <div className="mt-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {quotation.discountPercentage}% Discount Applied
-                          </span>
-                        </div>
-                      )}
-
-                      {quotation.notes && (
+                      {quotation.description && (
                         <div className="mt-3">
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium">Notes:</span> {quotation.notes}
-                          </p>
-                        </div>
-                      )}
-
-                      {quotation.respondedAt && (
-                        <div className="mt-3">
-                          <p className="text-sm text-gray-500">
-                            Response received on {new Date(quotation.respondedAt).toLocaleDateString()}
+                            <span className="font-medium">Quotation Details:</span> {quotation.description}
                           </p>
                         </div>
                       )}
@@ -237,22 +231,23 @@ const Quotations = () => {
                   </div>
 
                   <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+                    <button
+                      onClick={() => handleViewDetails(quotation)}
+                      className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                    >
                       <Eye className="w-4 h-4" />
                       <span>View Details</span>
                     </button>
-                    
+
                     {quotation.status === 'pending' && (
-                      <>
-                        <button className="flex items-center space-x-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors duration-200">
-                          <Edit className="w-4 h-4" />
-                          <span>Edit</span>
-                        </button>
-                        <button className="flex items-center space-x-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors duration-200">
-                          <Trash2 className="w-4 h-4" />
-                          <span>Withdraw</span>
-                        </button>
-                      </>
+                      <button
+                        onClick={() => handleWithdraw(quotation.id)}
+                        disabled={withdrawing === quotation.id}
+                        className="flex items-center space-x-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>{withdrawing === quotation.id ? 'Withdrawing...' : 'Withdraw'}</span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -261,6 +256,66 @@ const Quotations = () => {
           )}
         </div>
       </div>
+
+      {/* View Details Modal */}
+      {showDetailsModal && selectedQuotation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Quotation Details</h2>
+              <p className="text-gray-600">For: {selectedQuotation.item_title}</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Client Information</h3>
+                  <p className="text-gray-600">{selectedQuotation.customer_first_name} {selectedQuotation.customer_last_name}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Status</h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedQuotation.status)}`}>
+                    {selectedQuotation.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Total Cost</h3>
+                  <p className="text-2xl font-bold text-green-600">${selectedQuotation.bid_amount}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Delivery Timeline</h3>
+                  <p className="text-gray-600">{selectedQuotation.proposed_timeline}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Submitted Date</h3>
+                <p className="text-gray-600">{new Date(selectedQuotation.submitted_at).toLocaleDateString()}</p>
+              </div>
+
+              {selectedQuotation.description && (
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Quotation Details</h3>
+                  <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedQuotation.description}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-4 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

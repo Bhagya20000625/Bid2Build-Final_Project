@@ -33,7 +33,12 @@ const BrowseProjects = () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await projectService.getProjectsForArchitects();
+
+      // Get current user ID to filter out already-bid projects
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      const result = await projectService.getProjectsForArchitects(userId);
 
       if (result.success) {
         setProjects(result.projects || []);
@@ -223,9 +228,26 @@ const BrowseProjects = () => {
                   <h3 className="text-xl font-bold text-gray-900 leading-tight">
                     {project.title}
                   </h3>
-                  <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    {project.status}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    {project.user_has_bid ? (
+                      <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full border border-purple-300">
+                        ✓ Already Bid
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                        {project.status}
+                      </span>
+                    )}
+                    {project.user_has_bid && project.user_bid_status && (
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        project.user_bid_status === 'accepted' ? 'bg-green-100 text-green-700' :
+                        project.user_bid_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {project.user_bid_status}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-blue-600 font-medium">
@@ -266,19 +288,24 @@ const BrowseProjects = () => {
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
-                <button 
+                <button
                   onClick={() => handleViewProject(project)}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                 >
                   <Eye className="w-4 h-4" />
                   <span>View Details</span>
                 </button>
-                <button 
+                <button
                   onClick={() => handleBidProject(project)}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 group"
+                  disabled={project.user_has_bid}
+                  className={`flex-1 font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 ${
+                    project.user_has_bid
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
                   <Send className="w-4 h-4" />
-                  <span>Submit Bid</span>
+                  <span>{project.user_has_bid ? 'Bid Submitted' : 'Submit Bid'}</span>
                 </button>
               </div>
             </div>

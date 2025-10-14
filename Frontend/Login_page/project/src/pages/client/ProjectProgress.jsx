@@ -1,21 +1,237 @@
-import React, { useState } from 'react';
-import { Calendar, CheckCircle, Clock, AlertCircle, Upload, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, CheckCircle, Clock, AlertCircle, X, Image as ImageIcon, Eye, DollarSign, MapPin, User, Download, FileText } from 'lucide-react';
+import projectService from '../../services/projectService';
+import progressService from '../../services/progressService';
+import designService from '../../services/designService';
 
 const ProjectProgress = () => {
+  const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [progressUpdates, setProgressUpdates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedUpdate, setSelectedUpdate] = useState(null);
+  const [reviewForm, setReviewForm] = useState({
+    status: '',
+    comments: ''
+  });
+  const [viewingPhotos, setViewingPhotos] = useState(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
-  const projects = [];
+  // Architect design submission states
+  const [designSubmission, setDesignSubmission] = useState(null);
+  const [showDesignReviewModal, setShowDesignReviewModal] = useState(false);
+  const [designReviewForm, setDesignReviewForm] = useState({
+    comments: ''
+  });
 
-  const milestones = [];
+  // Load customer's projects
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  // Load progress and design submission when project selected
+  useEffect(() => {
+    if (selectedProject) {
+      loadProgressUpdates(selectedProject);
+      loadDesignSubmission(selectedProject);
+    }
+  }, [selectedProject]);
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      console.log('🔍 DEBUG - User from localStorage:', user);
+      console.log('🔍 DEBUG - User ID:', user.id);
+
+      const userId = user.id;
+
+      if (!userId) {
+        console.error('❌ No user ID found! User object:', user);
+        setError('User not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('📤 Fetching projects for user ID:', userId);
+
+      // Get customer projects
+      const result = await projectService.getCustomerProjects(userId);
+
+      console.log('📊 API Response:', result);
+
+      if (result.success && result.projects) {
+        console.log('📊 All projects received:', result.projects);
+        console.log('📊 Number of projects:', result.projects.length);
+
+        // Log each project's status and progress
+        result.projects.forEach(p => {
+          console.log(`Project "${p.title}": status="${p.status}", awarded_bid_id=${p.awarded_bid_id}, overall_progress=${p.overall_progress}`);
+        });
+
+        // Filter only projects with status 'in_progress' (awarded projects)
+        const activeProjects = result.projects.filter(
+          p => p.status === 'in_progress' && p.awarded_bid_id
+        );
+
+        console.log('✅ Filtered active projects:', activeProjects);
+        console.log('✅ Number of active projects:', activeProjects.length);
+
+        // Log project types (architect vs constructor)
+        activeProjects.forEach(p => {
+          const isArchitectProject = !p.has_project_plans && p.needs_architect;
+          console.log(`Project "${p.title}": isArchitectProject=${isArchitectProject}, has_plans=${p.has_project_plans}, needs_architect=${p.needs_architect}`);
+        });
+
+        setProjects(activeProjects);
+
+        // Auto-select first project
+        if (activeProjects.length > 0 && !selectedProject) {
+          setSelectedProject(activeProjects[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Load projects error:', error);
+      setError('Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadProgressUpdates = async (projectId) => {
+    try {
+      setLoading(true);
+      const result = await progressService.getProjectProgress(projectId);
+
+      if (result.success) {
+        setProgressUpdates(result.progressUpdates || []);
+      }
+    } catch (error) {
+      console.error('Load progress error:', error);
+      setError('Failed to load progress updates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDesignSubmission = async (projectId) => {
+    try {
+      console.log('🔍 Loading design submission for project ID:', projectId);
+      const result = await designService.getProjectDesignSubmission(projectId);
+
+      console.log('📐 Design submission API response:', result);
+
+      if (result.success && result.submission) {
+        setDesignSubmission(result.submission);
+        console.log('✅ Design submission loaded successfully:', result.submission);
+      } else {
+        setDesignSubmission(null);
+        console.log('⚠️ No design submission found. Result:', result);
+      }
+    } catch (error) {
+      console.error('❌ Load design submission error:', error);
+      console.error('Error response:', error.response);
+      // Don't show error to user if there's just no design submission
+      setDesignSubmission(null);
+    }
+  };
+
+  const handleReviewClick = (update) => {
+    setSelectedUpdate(update);
+    setReviewForm({ status: '', comments: '' });
+    setShowReviewModal(true);
+  };
+
+  const handleReviewSubmit = async (status) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      if (!userId) {
+        setError('User not found. Please log in again.');
+        return;
+      }
+
+      const result = await progressService.reviewProgressUpdate(
+        selectedUpdate.id,
+        userId,
+        status,
+        reviewForm.comments
+      );
+
+      if (result.success) {
+        alert(`Progress update ${status} successfully!`);
+        setShowReviewModal(false);
+        setSelectedUpdate(null);
+
+        // Reload both projects and progress updates to show updated overall_progress
+        await loadProjects();
+        await loadProgressUpdates(selectedProject);
+      }
+    } catch (error) {
+      console.error('Review error:', error);
+      setError(error.message || 'Failed to review progress update');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDesignReviewSubmit = async (status) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      if (!userId) {
+        setError('User not found. Please log in again.');
+        return;
+      }
+
+      console.log('📝 Reviewing design submission:', {
+        submissionId: designSubmission.id,
+        status,
+        userId
+      });
+
+      const result = await designService.reviewDesignSubmission(
+        designSubmission.id,
+        userId,
+        status,
+        designReviewForm.comments
+      );
+
+      if (result.success) {
+        alert(`Design ${status} successfully! ${status === 'approved' ? 'Payment has been created.' : ''}`);
+        setShowDesignReviewModal(false);
+
+        // Reload design submission to show updated status
+        await loadDesignSubmission(selectedProject);
+      }
+    } catch (error) {
+      console.error('Design review error:', error);
+      setError(error.message || 'Failed to review design submission');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'completed':
+      case 'approved':
         return 'text-green-600 bg-green-100';
-      case 'in_progress':
-        return 'text-blue-600 bg-blue-100';
-      case 'pending':
-        return 'text-gray-600 bg-gray-100';
+      case 'pending_review':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'rejected':
+        return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
@@ -23,16 +239,57 @@ const ProjectProgress = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':
+      case 'approved':
         return CheckCircle;
-      case 'in_progress':
+      case 'pending_review':
         return Clock;
-      case 'pending':
+      case 'rejected':
         return AlertCircle;
       default:
         return Clock;
     }
   };
+
+  const handleViewPhotos = async (updateId) => {
+    try {
+      setLoading(true);
+      const result = await progressService.getProgressUpdate(updateId);
+
+      if (result.success && result.progressUpdate.photos) {
+        setViewingPhotos(result.progressUpdate.photos);
+        setSelectedPhotoIndex(0);
+      }
+    } catch (error) {
+      console.error('Load photos error:', error);
+      setError('Failed to load photos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPhoto = (photo) => {
+    const baseURL = 'http://localhost:5000'; // Backend URL
+    const photoURL = `${baseURL}/${photo.file_path.replace(/\\/g, '/')}`;
+
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = photoURL;
+    link.download = photo.file_name;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const selectedProjectData = projects.find(p => p.id === selectedProject);
+
+  if (loading && projects.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading projects...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -41,138 +298,619 @@ const ProjectProgress = () => {
         <p className="text-gray-600">Track milestones and monitor project completion</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Project</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => setSelectedProject(project.id)}
-              className={`p-4 rounded-lg border-2 transition-colors duration-200 text-left ${
-                selectedProject === project.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <h3 className="font-medium text-gray-900 mb-2">{project.name}</h3>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Progress</span>
-                <span className="font-medium text-blue-600">{project.progress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${project.progress}%` }}
-                ></div>
-              </div>
-            </button>
-          ))}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
         </div>
-      </div>
+      )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Overall Progress</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">65%</div>
-            <div className="text-sm text-gray-500 mt-1">Complete</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">4</div>
-            <div className="text-sm text-gray-500 mt-1">Milestones Done</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-amber-600">2</div>
-            <div className="text-sm text-gray-500 mt-1">In Progress</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-gray-600">45</div>
-            <div className="text-sm text-gray-500 mt-1">Days Remaining</div>
-          </div>
+      {projects.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Projects</h3>
+          <p className="text-gray-600">You don't have any active projects with accepted bids yet.</p>
         </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Project Milestones</h2>
-        
-        <div className="space-y-6">
-          {milestones.map((milestone, index) => {
-            const StatusIcon = getStatusIcon(milestone.status);
-            
-            return (
-              <div key={milestone.id} className="relative">
-                {index < milestones.length - 1 && (
-                  <div className="absolute left-6 top-12 w-px h-16 bg-gray-200"></div>
-                )}
-                
-                <div className="flex space-x-4">
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                    milestone.status === 'completed' 
-                      ? 'bg-green-100 text-green-600' 
-                      : milestone.status === 'in_progress'
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <StatusIcon className="w-6 h-6" />
+      ) : (
+        <>
+          {/* Project Selector */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Project</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => setSelectedProject(project.id)}
+                  className={`p-4 rounded-lg border-2 transition-colors duration-200 text-left ${
+                    selectedProject === project.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <h3 className="font-medium text-gray-900 mb-2">{project.title}</h3>
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <span className="text-gray-500">Budget</span>
+                    <span className="font-medium text-blue-600">${project.budget_range}</span>
                   </div>
-                  
-                  <div className="flex-1 bg-gray-50 rounded-lg p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{milestone.title}</h3>
-                        <p className="text-gray-600 mb-2">{milestone.description}</p>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{milestone.startDate} - {milestone.endDate}</span>
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(milestone.status)}`}>
-                            {milestone.status.replace('_', ' ').toUpperCase()}
-                          </span>
-                        </div>
+
+                  {/* Show progress bar only for constructor projects */}
+                  {project.has_project_plans ? (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Progress</span>
+                        <span>{parseFloat(project.overall_progress || 0).toFixed(0)}%</span>
                       </div>
-                      
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900 mb-1">{milestone.progress}%</div>
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              milestone.status === 'completed' 
-                                ? 'bg-green-600' 
-                                : milestone.status === 'in_progress'
-                                ? 'bg-blue-600'
-                                : 'bg-gray-400'
-                            }`}
-                            style={{ width: `${milestone.progress}%` }}
-                          ></div>
-                        </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${parseFloat(project.overall_progress || 0)}%` }}
+                        />
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Upload className="w-4 h-4" />
-                          <span>{milestone.photos} photos</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Download className="w-4 h-4" />
-                          <span>{milestone.reports} reports</span>
+                  ) : (
+                    <div className="mt-2">
+                      <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                        Architectural Design
+                      </span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Progress Updates List - Only show for constructor projects (has project plans) */}
+          {selectedProjectData && selectedProjectData.has_project_plans && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                Progress Updates - {selectedProjectData.title}
+              </h2>
+
+              {progressUpdates.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No progress updates yet. Waiting for constructor to submit.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {progressUpdates.map((update, index) => {
+                    const StatusIcon = getStatusIcon(update.status);
+
+                    return (
+                      <div key={update.id} className="relative">
+                        {index < progressUpdates.length - 1 && (
+                          <div className="absolute left-6 top-12 w-px h-full bg-gray-200"></div>
+                        )}
+
+                        <div className="flex space-x-4">
+                          <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                            update.status === 'approved'
+                              ? 'bg-green-100 text-green-600'
+                              : update.status === 'pending_review'
+                              ? 'bg-yellow-100 text-yellow-600'
+                              : 'bg-red-100 text-red-600'
+                          }`}>
+                            <StatusIcon className="w-6 h-6" />
+                          </div>
+
+                          <div className="flex-1 bg-gray-50 rounded-lg p-6">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h3 className="text-lg font-semibold text-gray-900">
+                                    {update.milestone_name || `Progress Update #${progressUpdates.length - index}`}
+                                  </h3>
+                                  {update.progress_percentage !== null && update.progress_percentage !== undefined && (
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-2xl font-bold text-blue-600">
+                                        {parseFloat(update.progress_percentage).toFixed(0)}%
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-gray-600 mb-2">{update.description}</p>
+
+                                <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>{new Date(update.submitted_at).toLocaleDateString()}</span>
+                                  </div>
+                                  <span>By: {update.submitted_by_first_name} {update.submitted_by_last_name}</span>
+                                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(update.status)}`}>
+                                    {update.status.replace('_', ' ').toUpperCase()}
+                                  </span>
+                                </div>
+
+                                {/* Photos */}
+                                {update.photo_count > 0 && (
+                                  <button
+                                    onClick={() => handleViewPhotos(update.id)}
+                                    className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 mb-3"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span>View {update.photo_count} photo(s)</span>
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                )}
+
+                                {/* Review Comments */}
+                                {update.review_comments && (
+                                  <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+                                    <p className="text-sm font-medium text-gray-700 mb-1">Your Review:</p>
+                                    <p className="text-sm text-gray-600">{update.review_comments}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            {update.status === 'pending_review' && (
+                              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleReviewClick(update)}
+                                  className="px-4 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4 inline mr-1" />
+                                  Review
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-200">
-                        View Details
-                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Architect Design Submission Section */}
+          {selectedProjectData && selectedProjectData.needs_architect && !selectedProjectData.has_project_plans && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                Architectural Design - {selectedProjectData.title}
+              </h2>
+
+              {!designSubmission ? (
+                /* Waiting for Architect to Submit */
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Waiting for Design Submission</h3>
+                  <p className="text-gray-500">The architect is working on your project design. You'll be notified when it's ready for review.</p>
+                </div>
+              ) : (
+                /* Show Design Submission */
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                {/* Status Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                      designSubmission.status === 'approved'
+                        ? 'bg-green-100 text-green-600'
+                        : designSubmission.status === 'pending_review'
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : 'bg-red-100 text-red-600'
+                    }`}>
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">{designSubmission.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        By: {designSubmission.architect_first_name} {designSubmission.architect_last_name}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-4 py-2 text-sm font-medium rounded-full ${
+                    designSubmission.status === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : designSubmission.status === 'pending_review'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {designSubmission.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Design Details */}
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
+                    <p className="text-gray-700">{designSubmission.description || 'No description provided'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Payment Amount:</h4>
+                      <p className="text-3xl font-bold text-green-600">
+                        ${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Submitted On:</h4>
+                      <p className="text-lg text-gray-700">
+                        {new Date(designSubmission.submitted_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Design Files */}
+                {designSubmission.files && designSubmission.files.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Design Files ({designSubmission.files.length}):</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {designSubmission.files.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <FileText className="w-8 h-8 text-blue-500" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{file.file_name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <a
+                            href={`http://localhost:5000/${file.file_path.replace(/\\/g, '/')}`}
+                            download={file.file_name}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Review Comments (if rejected or approved) */}
+                {designSubmission.review_comments && (
+                  <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Your Review:</h4>
+                    <p className="text-gray-700">{designSubmission.review_comments}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons - Only show if pending review */}
+                {designSubmission.status === 'pending_review' && (
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-300">
+                    <button
+                      onClick={() => setShowDesignReviewModal(true)}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 font-medium"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Review & Approve Design</span>
+                    </button>
+                  </div>
+                )}
               </div>
-            );
-          })}
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && selectedUpdate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Review Progress Update</h2>
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Milestone:</h3>
+                <p className="text-gray-700">{selectedUpdate.milestone_name || 'Progress Update'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Progress Increment:</h3>
+                  <p className="text-2xl font-bold text-blue-600">{parseFloat(selectedUpdate.progress_percentage || 0).toFixed(0)}%</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Payment Amount:</h3>
+                  <p className="text-2xl font-bold text-green-600">${parseFloat(selectedUpdate.payment_amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Description:</h3>
+                <p className="text-gray-700">{selectedUpdate.description}</p>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Submitted by:</h3>
+                <p className="text-gray-700">
+                  {selectedUpdate.submitted_by_first_name} {selectedUpdate.submitted_by_last_name}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Date:</h3>
+                <p className="text-gray-700">{new Date(selectedUpdate.submitted_at).toLocaleString()}</p>
+              </div>
+
+              <div>
+                <label htmlFor="review-comments" className="block text-sm font-medium text-gray-700 mb-2">
+                  Comments (optional)
+                </label>
+                <textarea
+                  id="review-comments"
+                  rows={4}
+                  value={reviewForm.comments}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comments: e.target.value })}
+                  placeholder="Add any comments or feedback..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => handleReviewSubmit('rejected')}
+                  disabled={loading}
+                  className="px-6 py-2 border-2 border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <X className="w-4 h-4 inline mr-1" />
+                  {loading ? 'Rejecting...' : 'Reject'}
+                </button>
+                <button
+                  onClick={() => handleReviewSubmit('approved')}
+                  disabled={loading}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  {loading ? 'Approving...' : 'Approve & Release Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Photo Viewer Modal */}
+      {viewingPhotos && viewingPhotos.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <div className="relative max-w-6xl w-full h-full flex flex-col p-4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">
+                Photo {selectedPhotoIndex + 1} of {viewingPhotos.length}
+              </h2>
+              <button
+                onClick={() => setViewingPhotos(null)}
+                className="text-white hover:text-gray-300 text-3xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Photo Display */}
+            <div className="flex-1 flex items-center justify-center mb-4">
+              <img
+                src={`http://localhost:5000/${viewingPhotos[selectedPhotoIndex].file_path.replace(/\\/g, '/')}`}
+                alt={viewingPhotos[selectedPhotoIndex].file_name}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSelectedPhotoIndex(prev => Math.max(0, prev - 1))}
+                disabled={selectedPhotoIndex === 0}
+                className="px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+
+              <button
+                onClick={() => handleDownloadPhoto(viewingPhotos[selectedPhotoIndex])}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedPhotoIndex(prev => Math.min(viewingPhotos.length - 1, prev + 1))}
+                disabled={selectedPhotoIndex === viewingPhotos.length - 1}
+                className="px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+
+            {/* Thumbnail Strip */}
+            {viewingPhotos.length > 1 && (
+              <div className="flex justify-center mt-4 space-x-2 overflow-x-auto">
+                {viewingPhotos.map((photo, index) => (
+                  <button
+                    key={photo.id}
+                    onClick={() => setSelectedPhotoIndex(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                      selectedPhotoIndex === index ? 'border-blue-500' : 'border-transparent'
+                    }`}
+                  >
+                    <img
+                      src={`http://localhost:5000/${photo.file_path.replace(/\\/g, '/')}`}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Design Review Modal */}
+      {showDesignReviewModal && designSubmission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-gray-900">Review Architectural Design</h2>
+                <button
+                  onClick={() => setShowDesignReviewModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Design Title */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">{designSubmission.title}</h3>
+                <p className="text-sm text-gray-600">
+                  By: {designSubmission.architect_first_name} {designSubmission.architect_last_name}
+                </p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Design Description:</h4>
+                <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                  {designSubmission.description || 'No description provided'}
+                </p>
+              </div>
+
+              {/* Payment & Date Info */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Payment Amount:</h4>
+                  <p className="text-3xl font-bold text-green-600">
+                    ${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Payment will be created upon approval
+                  </p>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Submitted On:</h4>
+                  <p className="text-lg font-semibold text-gray-700">
+                    {new Date(designSubmission.submitted_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {new Date(designSubmission.submitted_at).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Design Files Summary */}
+              {designSubmission.files && designSubmission.files.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Design Files ({designSubmission.files.length} files):
+                  </h4>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    <ul className="space-y-2">
+                      {designSubmission.files.map((file, index) => (
+                        <li key={file.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium text-gray-700">{file.file_name}</span>
+                            <span className="text-gray-500">
+                              ({(file.file_size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 You can download and review all files from the main design view above
+                  </p>
+                </div>
+              )}
+
+              {/* Comments Input */}
+              <div>
+                <label htmlFor="design-review-comments" className="block text-sm font-medium text-gray-700 mb-2">
+                  Comments (Optional)
+                </label>
+                <textarea
+                  id="design-review-comments"
+                  rows={4}
+                  value={designReviewForm.comments}
+                  onChange={(e) => setDesignReviewForm({ ...designReviewForm, comments: e.target.value })}
+                  placeholder="Add any feedback, notes, or requirements for changes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Warning Box */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-yellow-900 mb-1">Please Review Carefully</h4>
+                    <p className="text-sm text-yellow-700">
+                      Once you approve this design, a payment of <strong>${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}</strong> will be created and marked as pending in your Payments section.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowDesignReviewModal(false)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors"
+              >
+                Cancel
+              </button>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => handleDesignReviewSubmit('rejected')}
+                  disabled={loading}
+                  className="px-6 py-3 border-2 border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 font-medium"
+                >
+                  <X className="w-4 h-4 inline mr-1" />
+                  {loading ? 'Rejecting...' : 'Request Changes'}
+                </button>
+                <button
+                  onClick={() => handleDesignReviewSubmit('approved')}
+                  disabled={loading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium flex items-center space-x-2"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span>{loading ? 'Approving...' : 'Approve & Release Payment'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

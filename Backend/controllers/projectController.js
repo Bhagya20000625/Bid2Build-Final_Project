@@ -8,7 +8,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'registration_database',
+  database: process.env.DB_NAME || 'bid2build',
   port: process.env.DB_PORT || 3306
 };
 
@@ -182,14 +182,16 @@ const getAllProjects = async (req, res) => {
 const getProjectsByRole = async (req, res) => {
   try {
     const role = req.path.split('/')[1]; // 'constructor' or 'architect'
-    
+    const { userId } = req.query; // Get user ID to check if they've already bid
+
     let whereClause;
+
     if (role === 'constructor') {
-      // Projects with plans (for constructors)
-      whereClause = 'WHERE p.has_project_plans = 1 AND p.status = "active"';
+      // Projects with plans (for constructors) - show active and in_progress projects
+      whereClause = 'WHERE p.has_project_plans = 1 AND (p.status = "active" OR p.status = "" OR p.status = "in_progress" OR p.status = "awarded")';
     } else if (role === 'architect') {
-      // Projects without plans but need architect
-      whereClause = 'WHERE p.has_project_plans = 0 AND p.needs_architect = 1 AND p.status = "active"';
+      // Projects without plans but need architect - show all project statuses so architects can see accepted bids too
+      whereClause = 'WHERE p.has_project_plans = 0 AND p.needs_architect = 1';
     } else {
       return res.status(400).json({
         success: false,
@@ -197,6 +199,7 @@ const getProjectsByRole = async (req, res) => {
       });
     }
 
+    // Get all projects with bid information
     const [projects] = await pool.execute(
       `SELECT p.*,
               COALESCE(u.first_name, 'Unknown') as first_name,
@@ -210,6 +213,46 @@ const getProjectsByRole = async (req, res) => {
        GROUP BY p.id
        ORDER BY p.created_at DESC`
     );
+
+    // If userId provided, check which projects this user has already bid on
+    if (userId) {
+      const [userBids] = await pool.execute(
+        `SELECT project_id, id as bid_id, status as bid_status, bid_amount, proposed_timeline
+         FROM bids
+         WHERE bidder_user_id = ? AND project_id IS NOT NULL`,
+        [userId]
+      );
+
+      // Create a map of project_id to bid info
+      const bidMap = {};
+      userBids.forEach(bid => {
+        bidMap[bid.project_id] = {
+          has_bid: true,
+          bid_id: bid.bid_id,
+          bid_status: bid.bid_status,
+          bid_amount: bid.bid_amount,
+          bid_timeline: bid.proposed_timeline
+        };
+      });
+
+      // Add bid status to each project
+      projects.forEach(project => {
+        const bidInfo = bidMap[project.id];
+        if (bidInfo) {
+          project.user_has_bid = true;
+          project.user_bid_id = bidInfo.bid_id;
+          project.user_bid_status = bidInfo.bid_status;
+          project.user_bid_amount = bidInfo.bid_amount;
+          project.user_bid_timeline = bidInfo.bid_timeline;
+        } else {
+          project.user_has_bid = false;
+          project.user_bid_id = null;
+          project.user_bid_status = null;
+          project.user_bid_amount = null;
+          project.user_bid_timeline = null;
+        }
+      });
+    }
 
     res.json({
       success: true,
@@ -233,7 +276,8 @@ const getProjectsByRole = async (req, res) => {
 // @access  Private (Customer only - own projects)
 const getCustomerProjects = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { customerId } = req.params;
+    const userId = customerId; // Match route parameter name
 
     const [projects] = await pool.execute(
       `SELECT p.*,
@@ -244,7 +288,7 @@ const getCustomerProjects = async (req, res) => {
        FROM projects p
        LEFT JOIN bids b ON p.id = b.project_id
        WHERE p.user_id = ?
-       GROUP BY p.id
+       GROUP BY p.id, p.awarded_bid_id
        ORDER BY p.created_at DESC`,
       [userId]
     );
