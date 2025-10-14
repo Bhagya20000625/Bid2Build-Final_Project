@@ -356,6 +356,74 @@ const createProgressNotification = async (progressData, notificationType, io = n
   }
 };
 
+// @desc    Helper function to create design-related notifications
+// @access  Internal use
+const createDesignNotification = async (designData, notificationType, io = null) => {
+  try {
+    let title, message, userId;
+
+    switch (notificationType) {
+      case 'design_submitted':
+        title = '📐 New Design Submission';
+        message = `Architect submitted design for "${designData.project_title}": ${designData.design_title}`;
+        userId = designData.client_id;
+
+        await pool.execute(
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES (?, ?, ?, ?)`,
+          [userId, 'design_submitted', title, message]
+        );
+        break;
+
+      case 'design_approved':
+        title = '✅ Design Approved';
+        message = `Your design "${designData.design_title}" has been approved! Payment is now pending.`;
+        userId = designData.architect_id;
+
+        await pool.execute(
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES (?, ?, ?, ?)`,
+          [userId, 'design_approved', title, message]
+        );
+        break;
+
+      case 'design_rejected':
+        title = '❌ Design Revision Requested';
+        message = `Your design "${designData.design_title}" needs revision. ${designData.review_comments || ''}`;
+        userId = designData.architect_id;
+
+        await pool.execute(
+          `INSERT INTO notifications (user_id, type, title, message)
+           VALUES (?, ?, ?, ?)`,
+          [userId, 'design_rejected', title, message]
+        );
+        break;
+    }
+
+    // Emit Socket.io event for real-time notification
+    if (io && userId) {
+      const [notifications] = await pool.execute(
+        'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+        [userId]
+      );
+
+      if (notifications.length > 0) {
+        io.emit('new-notification', {
+          userId: userId,
+          notification: notifications[0]
+        });
+        console.log(`🔔 Real-time notification sent to user ${userId}`);
+      }
+    }
+
+    console.log(`✅ ${notificationType} notification created for user ${userId}`);
+
+  } catch (error) {
+    console.error('Error creating design notification:', error);
+    // Don't throw error to avoid breaking the main design operation
+  }
+};
+
 module.exports = {
   createNotification,
   getUserNotifications,
@@ -363,5 +431,6 @@ module.exports = {
   markAllNotificationsRead,
   deleteNotification,
   createBidNotification,
-  createProgressNotification
+  createProgressNotification,
+  createDesignNotification
 };

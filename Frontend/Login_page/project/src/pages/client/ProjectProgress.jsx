@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, AlertCircle, X, Image as ImageIcon, Eye, DollarSign, MapPin, User, Download } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, AlertCircle, X, Image as ImageIcon, Eye, DollarSign, MapPin, User, Download, FileText } from 'lucide-react';
 import projectService from '../../services/projectService';
 import progressService from '../../services/progressService';
+import designService from '../../services/designService';
 
 const ProjectProgress = () => {
   const [projects, setProjects] = useState([]);
@@ -18,15 +19,23 @@ const ProjectProgress = () => {
   const [viewingPhotos, setViewingPhotos] = useState(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
+  // Architect design submission states
+  const [designSubmission, setDesignSubmission] = useState(null);
+  const [showDesignReviewModal, setShowDesignReviewModal] = useState(false);
+  const [designReviewForm, setDesignReviewForm] = useState({
+    comments: ''
+  });
+
   // Load customer's projects
   useEffect(() => {
     loadProjects();
   }, []);
 
-  // Load progress when project selected
+  // Load progress and design submission when project selected
   useEffect(() => {
     if (selectedProject) {
       loadProgressUpdates(selectedProject);
+      loadDesignSubmission(selectedProject);
     }
   }, [selectedProject]);
 
@@ -72,6 +81,12 @@ const ProjectProgress = () => {
         console.log('✅ Filtered active projects:', activeProjects);
         console.log('✅ Number of active projects:', activeProjects.length);
 
+        // Log project types (architect vs constructor)
+        activeProjects.forEach(p => {
+          const isArchitectProject = !p.has_project_plans && p.needs_architect;
+          console.log(`Project "${p.title}": isArchitectProject=${isArchitectProject}, has_plans=${p.has_project_plans}, needs_architect=${p.needs_architect}`);
+        });
+
         setProjects(activeProjects);
 
         // Auto-select first project
@@ -100,6 +115,28 @@ const ProjectProgress = () => {
       setError('Failed to load progress updates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDesignSubmission = async (projectId) => {
+    try {
+      console.log('🔍 Loading design submission for project ID:', projectId);
+      const result = await designService.getProjectDesignSubmission(projectId);
+
+      console.log('📐 Design submission API response:', result);
+
+      if (result.success && result.submission) {
+        setDesignSubmission(result.submission);
+        console.log('✅ Design submission loaded successfully:', result.submission);
+      } else {
+        setDesignSubmission(null);
+        console.log('⚠️ No design submission found. Result:', result);
+      }
+    } catch (error) {
+      console.error('❌ Load design submission error:', error);
+      console.error('Error response:', error.response);
+      // Don't show error to user if there's just no design submission
+      setDesignSubmission(null);
     }
   };
 
@@ -141,6 +178,47 @@ const ProjectProgress = () => {
     } catch (error) {
       console.error('Review error:', error);
       setError(error.message || 'Failed to review progress update');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDesignReviewSubmit = async (status) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id;
+
+      if (!userId) {
+        setError('User not found. Please log in again.');
+        return;
+      }
+
+      console.log('📝 Reviewing design submission:', {
+        submissionId: designSubmission.id,
+        status,
+        userId
+      });
+
+      const result = await designService.reviewDesignSubmission(
+        designSubmission.id,
+        userId,
+        status,
+        designReviewForm.comments
+      );
+
+      if (result.success) {
+        alert(`Design ${status} successfully! ${status === 'approved' ? 'Payment has been created.' : ''}`);
+        setShowDesignReviewModal(false);
+
+        // Reload design submission to show updated status
+        await loadDesignSubmission(selectedProject);
+      }
+    } catch (error) {
+      console.error('Design review error:', error);
+      setError(error.message || 'Failed to review design submission');
     } finally {
       setLoading(false);
     }
@@ -253,25 +331,35 @@ const ProjectProgress = () => {
                     <span className="text-gray-500">Budget</span>
                     <span className="font-medium text-blue-600">${project.budget_range}</span>
                   </div>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
-                      <span>Progress</span>
-                      <span>{parseFloat(project.overall_progress || 0).toFixed(0)}%</span>
+
+                  {/* Show progress bar only for constructor projects */}
+                  {project.has_project_plans ? (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Progress</span>
+                        <span>{parseFloat(project.overall_progress || 0).toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${parseFloat(project.overall_progress || 0)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${parseFloat(project.overall_progress || 0)}%` }}
-                      />
+                  ) : (
+                    <div className="mt-2">
+                      <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                        Architectural Design
+                      </span>
                     </div>
-                  </div>
+                  )}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Progress Updates List */}
-          {selectedProjectData && (
+          {/* Progress Updates List - Only show for constructor projects (has project plans) */}
+          {selectedProjectData && selectedProjectData.has_project_plans && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">
                 Progress Updates - {selectedProjectData.title}
@@ -372,6 +460,136 @@ const ProjectProgress = () => {
                     );
                   })}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Architect Design Submission Section */}
+          {selectedProjectData && selectedProjectData.needs_architect && !selectedProjectData.has_project_plans && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                Architectural Design - {selectedProjectData.title}
+              </h2>
+
+              {!designSubmission ? (
+                /* Waiting for Architect to Submit */
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Waiting for Design Submission</h3>
+                  <p className="text-gray-500">The architect is working on your project design. You'll be notified when it's ready for review.</p>
+                </div>
+              ) : (
+                /* Show Design Submission */
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                {/* Status Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                      designSubmission.status === 'approved'
+                        ? 'bg-green-100 text-green-600'
+                        : designSubmission.status === 'pending_review'
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : 'bg-red-100 text-red-600'
+                    }`}>
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">{designSubmission.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        By: {designSubmission.architect_first_name} {designSubmission.architect_last_name}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-4 py-2 text-sm font-medium rounded-full ${
+                    designSubmission.status === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : designSubmission.status === 'pending_review'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {designSubmission.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Design Details */}
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
+                    <p className="text-gray-700">{designSubmission.description || 'No description provided'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Payment Amount:</h4>
+                      <p className="text-3xl font-bold text-green-600">
+                        ${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Submitted On:</h4>
+                      <p className="text-lg text-gray-700">
+                        {new Date(designSubmission.submitted_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Design Files */}
+                {designSubmission.files && designSubmission.files.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Design Files ({designSubmission.files.length}):</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {designSubmission.files.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <FileText className="w-8 h-8 text-blue-500" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{file.file_name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <a
+                            href={`http://localhost:5000/${file.file_path.replace(/\\/g, '/')}`}
+                            download={file.file_name}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Review Comments (if rejected or approved) */}
+                {designSubmission.review_comments && (
+                  <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-gray-900 mb-2">Your Review:</h4>
+                    <p className="text-gray-700">{designSubmission.review_comments}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons - Only show if pending review */}
+                {designSubmission.status === 'pending_review' && (
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-300">
+                    <button
+                      onClick={() => setShowDesignReviewModal(true)}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 font-medium"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Review & Approve Design</span>
+                    </button>
+                  </div>
+                )}
+              </div>
               )}
             </div>
           )}
@@ -547,6 +765,149 @@ const ProjectProgress = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Design Review Modal */}
+      {showDesignReviewModal && designSubmission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-gray-900">Review Architectural Design</h2>
+                <button
+                  onClick={() => setShowDesignReviewModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-3xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Design Title */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">{designSubmission.title}</h3>
+                <p className="text-sm text-gray-600">
+                  By: {designSubmission.architect_first_name} {designSubmission.architect_last_name}
+                </p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Design Description:</h4>
+                <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                  {designSubmission.description || 'No description provided'}
+                </p>
+              </div>
+
+              {/* Payment & Date Info */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Payment Amount:</h4>
+                  <p className="text-3xl font-bold text-green-600">
+                    ${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Payment will be created upon approval
+                  </p>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Submitted On:</h4>
+                  <p className="text-lg font-semibold text-gray-700">
+                    {new Date(designSubmission.submitted_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {new Date(designSubmission.submitted_at).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Design Files Summary */}
+              {designSubmission.files && designSubmission.files.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Design Files ({designSubmission.files.length} files):
+                  </h4>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                    <ul className="space-y-2">
+                      {designSubmission.files.map((file, index) => (
+                        <li key={file.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium text-gray-700">{file.file_name}</span>
+                            <span className="text-gray-500">
+                              ({(file.file_size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 You can download and review all files from the main design view above
+                  </p>
+                </div>
+              )}
+
+              {/* Comments Input */}
+              <div>
+                <label htmlFor="design-review-comments" className="block text-sm font-medium text-gray-700 mb-2">
+                  Comments (Optional)
+                </label>
+                <textarea
+                  id="design-review-comments"
+                  rows={4}
+                  value={designReviewForm.comments}
+                  onChange={(e) => setDesignReviewForm({ ...designReviewForm, comments: e.target.value })}
+                  placeholder="Add any feedback, notes, or requirements for changes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Warning Box */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-yellow-900 mb-1">Please Review Carefully</h4>
+                    <p className="text-sm text-yellow-700">
+                      Once you approve this design, a payment of <strong>${parseFloat(designSubmission.payment_amount || 0).toLocaleString()}</strong> will be created and marked as pending in your Payments section.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowDesignReviewModal(false)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white transition-colors"
+              >
+                Cancel
+              </button>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => handleDesignReviewSubmit('rejected')}
+                  disabled={loading}
+                  className="px-6 py-3 border-2 border-red-400 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 font-medium"
+                >
+                  <X className="w-4 h-4 inline mr-1" />
+                  {loading ? 'Rejecting...' : 'Request Changes'}
+                </button>
+                <button
+                  onClick={() => handleDesignReviewSubmit('approved')}
+                  disabled={loading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium flex items-center space-x-2"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span>{loading ? 'Approving...' : 'Approve & Release Payment'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

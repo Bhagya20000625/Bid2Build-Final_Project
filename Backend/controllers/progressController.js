@@ -319,6 +319,24 @@ const reviewProgressUpdate = async (req, res) => {
         [progressUpdate.project_id]
       );
       console.log('✅ Verified project data:', verifyProject[0]);
+
+      // Create payment record in pending status
+      console.log('💰 Creating payment record for approved progress update...');
+      const [paymentResult] = await pool.execute(
+        `INSERT INTO payments (
+          project_id, progress_update_id, bid_id, payer_id, payee_id, amount, payment_status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+        [
+          progressUpdate.project_id,
+          progressUpdate.id,
+          progressUpdate.bid_id,
+          progressUpdate.client_id,
+          progressUpdate.constructor_id,
+          parseFloat(progressUpdate.payment_amount || 0)
+        ]
+      );
+
+      console.log('✅ Payment record created with ID:', paymentResult.insertId);
     }
 
     // Create notification for constructor

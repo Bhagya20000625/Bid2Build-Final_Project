@@ -405,6 +405,10 @@ const getBidderBids = async (req, res) => {
                 WHEN b.project_id IS NOT NULL THEN cu.email
                 ELSE cmu.email
               END as customer_email,
+              CASE
+                WHEN b.project_id IS NOT NULL THEN cu.id
+                ELSE cmu.id
+              END as customer_id,
               p.overall_progress,
               p.title as project_title
        FROM bids b

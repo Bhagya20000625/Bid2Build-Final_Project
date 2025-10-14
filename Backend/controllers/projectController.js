@@ -187,11 +187,11 @@ const getProjectsByRole = async (req, res) => {
     let whereClause;
 
     if (role === 'constructor') {
-      // Projects with plans (for constructors)
-      whereClause = 'WHERE p.has_project_plans = 1 AND (p.status = "active" OR p.status = "")';
+      // Projects with plans (for constructors) - show active and in_progress projects
+      whereClause = 'WHERE p.has_project_plans = 1 AND (p.status = "active" OR p.status = "" OR p.status = "in_progress" OR p.status = "awarded")';
     } else if (role === 'architect') {
-      // Projects without plans but need architect
-      whereClause = 'WHERE p.has_project_plans = 0 AND p.needs_architect = 1 AND (p.status = "active" OR p.status = "")';
+      // Projects without plans but need architect - show all project statuses so architects can see accepted bids too
+      whereClause = 'WHERE p.has_project_plans = 0 AND p.needs_architect = 1';
     } else {
       return res.status(400).json({
         success: false,

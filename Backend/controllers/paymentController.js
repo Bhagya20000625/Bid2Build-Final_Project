@@ -410,10 +410,72 @@ const getPayment = async (req, res) => {
   }
 };
 
+// @desc    Get client payments with milestone details
+// @route   GET /api/payments/client/:clientId
+// @access  Private (Client only)
+const getClientPayments = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+
+    const [payments] = await pool.execute(
+      `SELECT p.*,
+              payer.first_name as payer_first_name,
+              payer.last_name as payer_last_name,
+              payee.first_name as payee_first_name,
+              payee.last_name as payee_last_name,
+              COALESCE(proj.title, mr.title) as project_name,
+              pu.milestone_name,
+              pu.description as milestone_description,
+              pu.progress_percentage,
+              ds.title as design_title,
+              ds.description as design_description,
+              b.proposed_timeline,
+              b.bidder_role
+       FROM payments p
+       JOIN users payer ON p.payer_id = payer.id
+       JOIN users payee ON p.payee_id = payee.id
+       LEFT JOIN projects proj ON p.project_id = proj.id
+       LEFT JOIN material_requests mr ON p.material_request_id = mr.id
+       LEFT JOIN progress_updates pu ON p.progress_update_id = pu.id
+       LEFT JOIN design_submissions ds ON p.design_submission_id = ds.id
+       LEFT JOIN bids b ON p.bid_id = b.id
+       WHERE p.payer_id = ?
+       ORDER BY p.created_at DESC`,
+      [clientId]
+    );
+
+    // Calculate totals
+    const totalPaid = payments
+      .filter(p => p.payment_status === 'completed')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+    const totalPending = payments
+      .filter(p => p.payment_status === 'pending')
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+    res.json({
+      success: true,
+      count: payments.length,
+      totalPaid: totalPaid,
+      totalPending: totalPending,
+      payments: payments
+    });
+
+  } catch (error) {
+    console.error('Get client payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch client payments',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   createPayment,
   updatePaymentStatus,
   getProjectPayments,
   getUserPayments,
-  getPayment
+  getPayment,
+  getClientPayments
 };

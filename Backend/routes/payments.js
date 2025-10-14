@@ -7,7 +7,8 @@ const {
   updatePaymentStatus,
   getProjectPayments,
   getUserPayments,
-  getPayment
+  getPayment,
+  getClientPayments
 } = require('../controllers/paymentController');
 
 // @route   POST /api/payments
@@ -19,6 +20,11 @@ router.post('/', createPayment);
 // @desc    Update payment status
 // @access  Private
 router.put('/:id/status', updatePaymentStatus);
+
+// @route   GET /api/payments/client/:clientId
+// @desc    Get client payments with milestone details
+// @access  Private (Client only)
+router.get('/client/:clientId', getClientPayments);
 
 // @route   GET /api/payments/project/:projectId
 // @desc    Get all payments for a project

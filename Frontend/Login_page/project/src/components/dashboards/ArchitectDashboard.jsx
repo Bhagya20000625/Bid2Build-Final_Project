@@ -4,17 +4,9 @@ import Sidebar from '../architect/Sidebar';
 import BrowseProjects from '../../pages/architect/BrowseProjects';
 import Notifications from '../../pages/architect/Notifications';
 import Messages from '../../pages/architect/Messages';
+import MyProposals from '../../pages/architect/MyProposals';
 
-// Temporary placeholder components for the other pages
-const MyProposals = () => (
-  <div className="flex-1 bg-gray-50 p-8">
-    <div className="bg-white rounded-lg shadow p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">My Proposals</h1>
-      <p className="text-gray-600">Track your submitted proposals and their current status. (Component will be integrated soon)</p>
-    </div>
-  </div>
-);
-
+// Temporary placeholder component for Payments
 const Payments = () => (
   <div className="flex-1 bg-gray-50 p-8">
     <div className="bg-white rounded-lg shadow p-6">
