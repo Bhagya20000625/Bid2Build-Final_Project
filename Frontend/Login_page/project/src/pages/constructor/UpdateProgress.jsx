@@ -61,6 +61,7 @@ const UpdateProgress = () => {
     }
   ];
 
+  
   const getStatusColor = (status) => {
     switch (status) {
       case 'Completed':

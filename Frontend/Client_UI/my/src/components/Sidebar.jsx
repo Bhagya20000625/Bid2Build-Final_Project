@@ -55,11 +55,7 @@ const Sidebar = ({ activeTab, setActiveTab, notifications }) => {
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
-                  {item.hasNotification && notifications > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {notifications}
-                    </span>
-                  )}
+                  {/* notification badge removed */}
                 </button>
               </li>
             );
