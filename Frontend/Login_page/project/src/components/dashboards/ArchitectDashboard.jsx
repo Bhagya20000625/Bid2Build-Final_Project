@@ -25,7 +25,6 @@ const ArchitectDashboard = () => {
         <Route path="/proposals" element={<MyProposals />} />
         <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
         <Route path="/messages" element={<div className="p-8"><Messages /></div>} />
-        <Route path="/payments" element={<Payments />} />
       </Routes>
     </div>
   );

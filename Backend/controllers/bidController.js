@@ -493,6 +493,8 @@ const updateBidStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.validatedData;
 
+    console.log(`🔄 Processing bid status update: Bid ID ${id}, Status: ${status}`);
+
     // Check if bid exists
     const [existingBids] = await pool.execute('SELECT * FROM bids WHERE id = ?', [id]);
     
@@ -544,6 +546,55 @@ const updateBidStatus = async (req, res) => {
           'UPDATE material_requests SET status = ? WHERE id = ?',
           ['awarded', updatedBid.material_request_id]
         );
+
+        // Auto-create payment entry for accepted material request bid
+        console.log(`🔄 Creating payment for material request bid ${id}...`);
+        try {
+          // Get material request details to find the client (payer)
+          const [materialRequests] = await pool.execute(
+            'SELECT user_id FROM material_requests WHERE id = ?',
+            [updatedBid.material_request_id]
+          );
+
+          if (materialRequests.length > 0) {
+            const materialRequest = materialRequests[0];
+            
+            console.log(`💳 Creating payment: MR ${updatedBid.material_request_id}, Payer ${materialRequest.user_id}, Payee ${updatedBid.bidder_user_id}, Amount ${updatedBid.bid_amount}`);
+            
+            // Create payment entry
+            const [paymentResult] = await pool.execute(
+              `INSERT INTO payments (
+                material_request_id, bid_id, payer_id, payee_id, amount,
+                payment_method, payment_status, payment_notes, created_at
+              ) VALUES (?, ?, ?, ?, ?, 'bank_transfer', 'pending', 
+                'Auto-generated payment for accepted material request quotation', NOW())`,
+              [
+                updatedBid.material_request_id,
+                id,
+                materialRequest.user_id, // Corrected: use user_id instead of client_id
+                updatedBid.bidder_user_id,  // Supplier is the payee
+                updatedBid.bid_amount
+              ]
+            );
+
+            console.log(`💳 Payment created with ID: ${paymentResult.insertId}`);
+
+            console.log(`✅ Payment card created for accepted material request bid ${id}`);
+
+            // Create notification for the supplier (payee) about payment creation
+            const { createNotification } = require('./notificationController');
+            await createNotification({
+              user_id: updatedBid.bidder_user_id,
+              type: 'payment_created',
+              title: 'Payment Created',
+              message: `A payment of $${updatedBid.bid_amount} has been created for your accepted material quotation`,
+              related_id: updatedBid.material_request_id
+            });
+          }
+        } catch (paymentError) {
+          console.error('❌ Error creating payment entry:', paymentError);
+          // Don't fail the bid acceptance if payment creation fails
+        }
       }
 
       // Get Socket.io instance and send notification

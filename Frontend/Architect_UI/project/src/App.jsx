@@ -16,7 +16,6 @@ function App() {
           <Route path="/proposals" element={<MyProposals />} />
           {/* Removed /my-projects route as it's now consolidated into /proposals */}
           <Route path="/messages" element={<Messages />} />
-          <Route path="/payments" element={<Payments />} />
         </Routes>
       </div>
     </Router>

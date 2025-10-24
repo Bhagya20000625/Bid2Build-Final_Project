@@ -16,7 +16,6 @@ const Sidebar = () => {
     { to: '/', icon: Building, label: 'Browse Projects' },
     { to: '/proposals', icon: FileText, label: 'My Proposals' },
     { to: '/messages', icon: MessageCircle, label: 'Messages' },
-    { to: '/payments', icon: CreditCard, label: 'Payments' },
   ];
 
   return (

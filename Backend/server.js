@@ -17,6 +17,10 @@ const progressRoutes = require('./routes/progress');
 const paymentRoutes = require('./routes/payments');
 const designRoutes = require('./routes/designs');
 
+// Admin routes
+const adminAuthRoutes = require('./routes/adminAuth');
+const adminDashboardRoutes = require('./routes/adminDashboard');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -51,6 +55,10 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/designs', designRoutes);
+
+// Admin routes
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin', adminDashboardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

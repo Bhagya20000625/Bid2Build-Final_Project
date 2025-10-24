@@ -26,7 +26,6 @@ const Sidebar = ({ notifications }) => {
     { id: 'orders', label: 'Active Orders', icon: Package, to: '/supplier-dashboard/orders' },
     { id: 'notifications', label: 'Notifications', icon: Bell, to: '/supplier-dashboard/notifications', hasNotification: true },
     { id: 'messaging', label: 'Messages', icon: MessageCircle, to: '/supplier-dashboard/messaging' },
-    { id: 'payments', label: 'Payments', icon: CreditCard, to: '/supplier-dashboard/payments' },
     { id: 'profile', label: 'Profile', icon: User, to: '/supplier-dashboard/profile' },
   ];
 

@@ -21,7 +21,6 @@ const ConstructorDashboard = () => {
           <Route path="/active-projects" element={<div className="p-8"><ActiveProjects /></div>} />
           <Route path="/my-bids" element={<div className="p-8"><MyBids /></div>} />
           <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
-          <Route path="/payments" element={<div className="p-8"><Payments /></div>} />
           <Route path="/messages" element={<div className="p-8"><Messages /></div>} />
         </Routes>
       </main>

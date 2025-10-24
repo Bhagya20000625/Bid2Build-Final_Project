@@ -20,7 +20,6 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Browse Projects', href: '/projects', icon: Search },
     { name: 'Update Progress', href: '/progress', icon: TrendingUp },
-    { name: 'Payments', href: '/payments', icon: CreditCard },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
   ];
 
