@@ -9,6 +9,8 @@ import CustomerDashboard from './components/dashboards/CustomerDashboard';
 import ConstructorDashboard from './components/dashboards/ConstructorDashboard';
 import SupplierDashboard from './components/dashboards/SupplierDashboard';
 import ArchitectDashboard from './components/dashboards/ArchitectDashboard';
+import AdminLogin from './components/admin/AdminLogin';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 function App() {
   return (
@@ -24,6 +26,10 @@ function App() {
           <Route path="/constructor-dashboard/*" element={<ConstructorDashboard />} />
           <Route path="/supplier-dashboard/*" element={<SupplierDashboard />} />
           <Route path="/architect-dashboard/*" element={<ArchitectDashboard />} />
+          
+          {/* Admin Routes - Separate from user routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
         </Routes>
       </div>
     </Router>

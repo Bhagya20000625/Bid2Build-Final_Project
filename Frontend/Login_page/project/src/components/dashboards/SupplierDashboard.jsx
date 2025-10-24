@@ -24,7 +24,6 @@ const SupplierDashboard = () => {
           <Route path="/orders" element={<div className="p-8"><Orders /></div>} />
           <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
           <Route path="/messaging" element={<div className="p-8"><Messaging /></div>} />
-          <Route path="/payments" element={<div className="p-8"><Payments /></div>} />
           <Route path="/profile" element={<div className="p-8"><Profile /></div>} />
         </Routes>
       </main>

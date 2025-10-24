@@ -22,7 +22,6 @@ const Sidebar = ({ notifications }) => {
     { id: 'active-projects', label: 'Active Projects', icon: Briefcase, to: '/constructor-dashboard/active-projects' },
     { id: 'my-bids', label: 'My Bids', icon: FileText, to: '/constructor-dashboard/my-bids' },
     { id: 'notifications', label: 'Notifications', icon: Bell, to: '/constructor-dashboard/notifications', hasNotification: true },
-    { id: 'payments', label: 'Payments', icon: CreditCard, to: '/constructor-dashboard/payments' },
     { id: 'messages', label: 'Messages', icon: MessageCircle, to: '/constructor-dashboard/messages' },
   ];
 

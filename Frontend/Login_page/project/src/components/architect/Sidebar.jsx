@@ -24,7 +24,6 @@ const Sidebar = () => {
     { to: '/architect-dashboard/proposals', icon: FileText, label: 'My Proposals' },
     { to: '/architect-dashboard/notifications', icon: Bell, label: 'Notifications' },
     { to: '/architect-dashboard/messages', icon: MessageCircle, label: 'Messages' },
-    { to: '/architect-dashboard/payments', icon: CreditCard, label: 'Payments' },
   ];
 
   // Load user data from database
