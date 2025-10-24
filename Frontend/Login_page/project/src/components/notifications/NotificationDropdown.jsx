@@ -103,7 +103,18 @@ const NotificationDropdown = ({ userId }) => {
     <div className="relative" ref={dropdownRef}>
       {/* Notification Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          // Navigate to the user's notifications page instead of only toggling the dropdown
+          const role = localStorage.getItem('userRole');
+          let target = '/notifications';
+          if (role === 'Architect') target = '/architect-dashboard/notifications';
+          else if (role === 'Constructor') target = '/constructor-dashboard/notifications';
+          else if (role === 'Supplier') target = '/supplier-dashboard/notifications';
+          else if (role === 'Customer') target = '/customer-dashboard/notifications';
+          else target = '/notifications';
+
+          navigate(target);
+        }}
         className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
       >
         <Bell className="w-6 h-6" />
@@ -215,7 +226,15 @@ const NotificationDropdown = ({ userId }) => {
             <div className="p-3 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => {
-                  navigate('/constructor-dashboard/notifications');
+                  const role = localStorage.getItem('userRole');
+                  let target = '/notifications';
+                  if (role === 'Architect') target = '/architect-dashboard/notifications';
+                  else if (role === 'Constructor') target = '/constructor-dashboard/notifications';
+                  else if (role === 'Supplier') target = '/supplier-dashboard/notifications';
+                  else if (role === 'Customer') target = '/customer-dashboard/notifications';
+                  else target = '/notifications';
+
+                  navigate(target);
                   setIsOpen(false);
                 }}
                 className="w-full text-center text-blue-600 hover:text-blue-800 text-sm font-medium"

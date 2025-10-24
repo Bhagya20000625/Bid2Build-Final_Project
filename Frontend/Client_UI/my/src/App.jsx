@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [notifications, setNotifications] = useState(3);
+  
 
   const renderContent = () => {
     switch (activeTab) {
