@@ -16,6 +16,7 @@ const notificationRoutes = require('./routes/notifications');
 const progressRoutes = require('./routes/progress');
 const paymentRoutes = require('./routes/payments');
 const designRoutes = require('./routes/designs');
+const portfolioRoutes = require('./routes/portfolio');
 
 // Admin routes
 const adminAuthRoutes = require('./routes/adminAuth');
@@ -55,6 +56,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/designs', designRoutes);
+app.use('/api/portfolio', portfolioRoutes);
 
 // Admin routes
 app.use('/api/admin/auth', adminAuthRoutes);
@@ -86,6 +88,7 @@ app.get('/', (req, res) => {
       progress: '/api/progress',
       payments: '/api/payments',
       designs: '/api/designs',
+      portfolio: '/api/portfolio',
       health: '/api/health'
     }
   });
