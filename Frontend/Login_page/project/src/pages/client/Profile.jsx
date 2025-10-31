@@ -129,16 +129,6 @@ const Profile = () => {
               Profile Settings
             </button>
             <button
-              onClick={() => setActiveTab('documents')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                activeTab === 'documents'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Document Vault
-            </button>
-            <button
               onClick={() => setActiveTab('projects')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
                 activeTab === 'projects'
@@ -256,49 +246,6 @@ const Profile = () => {
                   </button>
                 </div>
               </form>
-            </div>
-          )}
-
-          {activeTab === 'documents' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Document Vault</h2>
-                <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Document</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{doc.name}</h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                            <span>{doc.type}</span>
-                            <span>•</span>
-                            <span>{doc.size}</span>
-                            <span>•</span>
-                            <span>Uploaded {new Date(doc.uploadDate).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDocumentDownload(doc.id)}
-                        className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors duration-200"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span className="text-sm">Download</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 

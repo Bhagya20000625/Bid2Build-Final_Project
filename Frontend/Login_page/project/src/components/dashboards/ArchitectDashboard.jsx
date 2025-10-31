@@ -5,6 +5,8 @@ import BrowseProjects from '../../pages/architect/BrowseProjects';
 import Notifications from '../../pages/architect/Notifications';
 import Messages from '../../pages/architect/Messages';
 import MyProposals from '../../pages/architect/MyProposals';
+import Portfolio from '../../pages/architect/Portfolio';
+import Profile from '../../pages/architect/Profile';
 
 // Temporary placeholder component for Payments
 const Payments = () => (
@@ -23,6 +25,8 @@ const ArchitectDashboard = () => {
       <Routes>
         <Route path="/" element={<BrowseProjects />} />
         <Route path="/proposals" element={<MyProposals />} />
+        <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
         <Route path="/messages" element={<div className="p-8"><Messages /></div>} />
       </Routes>
