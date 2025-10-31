@@ -22,6 +22,7 @@ const Sidebar = () => {
   const navItems = [
     { to: '/architect-dashboard', icon: Building, label: 'Browse Projects' },
     { to: '/architect-dashboard/proposals', icon: FileText, label: 'My Proposals' },
+    { to: '/architect-dashboard/profile', icon: User, label: 'Profile' },
     { to: '/architect-dashboard/notifications', icon: Bell, label: 'Notifications' },
     { to: '/architect-dashboard/messages', icon: MessageCircle, label: 'Messages' },
   ];

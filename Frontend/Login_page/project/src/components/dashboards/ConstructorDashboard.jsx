@@ -7,6 +7,8 @@ import MyBids from '../../pages/constructor/MyBids';
 import Notifications from '../../pages/constructor/Notifications';
 import Payments from '../../pages/constructor/Payments';
 import Messages from '../../pages/constructor/Messages';
+import Portfolio from '../../pages/constructor/Portfolio';
+import Profile from '../../pages/constructor/Profile';
 
 const ConstructorDashboard = () => {
   const [notifications] = useState(3);
@@ -20,6 +22,8 @@ const ConstructorDashboard = () => {
           <Route path="/browse-projects" element={<div className="p-8"><BrowseProjects /></div>} />
           <Route path="/active-projects" element={<div className="p-8"><ActiveProjects /></div>} />
           <Route path="/my-bids" element={<div className="p-8"><MyBids /></div>} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/notifications" element={<div className="p-8"><Notifications /></div>} />
           <Route path="/messages" element={<div className="p-8"><Messages /></div>} />
         </Routes>
