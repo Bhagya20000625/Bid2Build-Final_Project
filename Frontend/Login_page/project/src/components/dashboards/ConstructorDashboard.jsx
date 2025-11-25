@@ -5,7 +5,6 @@ import BrowseProjects from '../../pages/constructor/BrowseProjects';
 import ActiveProjects from '../../pages/constructor/ActiveProjects';
 import MyBids from '../../pages/constructor/MyBids';
 import Notifications from '../../pages/constructor/Notifications';
-import Payments from '../../pages/constructor/Payments';
 import Messages from '../../pages/constructor/Messages';
 import Portfolio from '../../pages/constructor/Portfolio';
 import Profile from '../../pages/constructor/Profile';

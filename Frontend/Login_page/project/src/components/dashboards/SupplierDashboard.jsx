@@ -7,7 +7,6 @@ import Quotations from '../../pages/supplier/Quotations';
 import Orders from '../../pages/supplier/Orders';
 import Notifications from '../../pages/supplier/Notifications';
 import Messaging from '../../pages/supplier/Messaging';
-import Payments from '../../pages/supplier/Payments';
 import Profile from '../../pages/supplier/Profile';
 
 const SupplierDashboard = () => {

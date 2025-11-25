@@ -148,56 +148,7 @@ const BrowseProjects = () => {
     }
   };
 
-  const mockProjects = [
-    {
-      id: 1,
-      title: 'Office Building Renovation',
-      location: 'Downtown Seattle, WA',
-      budget: '$250,000 - $300,000',
-      deadline: '2025-03-15',
-      category: 'Commercial',
-      description: 'Complete renovation of a 10,000 sq ft office building including HVAC, electrical, and interior design.',
-      postedDate: '2025-01-10',
-      bidsCount: 12,
-      status: 'Open'
-    },
-    {
-      id: 2,
-      title: 'Residential Kitchen Remodel',
-      location: 'Bellevue, WA',
-      budget: '$45,000 - $65,000',
-      deadline: '2025-02-28',
-      category: 'Residential',
-      description: 'Modern kitchen renovation with custom cabinets, granite countertops, and premium appliances.',
-      postedDate: '2025-01-12',
-      bidsCount: 8,
-      status: 'Open'
-    },
-    {
-      id: 3,
-      title: 'Warehouse Construction',
-      location: 'Tacoma, WA',
-      budget: '$800,000 - $1,200,000',
-      deadline: '2025-06-30',
-      category: 'Industrial',
-      description: '50,000 sq ft warehouse construction with loading docks and office space.',
-      postedDate: '2025-01-08',
-      bidsCount: 15,
-      status: 'Open'
-    },
-    {
-      id: 4,
-      title: 'School Playground Installation',
-      location: 'Redmond, WA',
-      budget: '$75,000 - $90,000',
-      deadline: '2025-04-15',
-      category: 'Public',
-      description: 'Installation of playground equipment, safety surfacing, and landscaping.',
-      postedDate: '2025-01-05',
-      bidsCount: 6,
-      status: 'Open'
-    }
-  ];
+  // Developer example data removed: real project data is fetched via `projectService`
 
   const categories = ['all', 'Commercial', 'Residential', 'Industrial', 'Public'];
 
