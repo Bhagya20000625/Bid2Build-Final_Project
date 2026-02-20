@@ -1,0 +1,11 @@
+{
+  "name": "bid2build-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ./Login_page/project run dev",
+    "dev:login": "npm --prefix ./Login_page/project run dev",
+    "dev:landing": "npm --prefix ./Landing_P run dev",
+    "dev:architect": "npm --prefix ./Architect_UI/project run dev",
+    "dev:constructor": "npm --prefix ./\"Constructor UI\" run dev"
+  }
+}
