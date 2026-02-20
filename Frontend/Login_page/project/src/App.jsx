@@ -11,11 +11,17 @@ import SupplierDashboard from './components/dashboards/SupplierDashboard';
 import ArchitectDashboard from './components/dashboards/ArchitectDashboard';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
+import CustomCursor from './components/layout/CustomCursor';
+import ScrollToTop from './components/layout/ScrollToTop';
+import AnimatedBackground from './components/layout/AnimatedBackground';
 
 function App() {
   return (
     <Router>
-      <div className="App">
+      <div className="App relative min-h-screen">
+        <CustomCursor />
+        <AnimatedBackground />
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<About />} />

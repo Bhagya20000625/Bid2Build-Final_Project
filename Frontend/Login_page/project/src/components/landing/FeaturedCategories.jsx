@@ -1,194 +1,131 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
   MessageCircle,
   Shield,
   Users,
   Star,
   Building2,
-  ArrowRight,
   TrendingUp,
-} from "lucide-react";
+} from 'lucide-react';
+import SectionAnimator from '../ui/SectionAnimator';
 
 const SERVICES = [
   {
-    title: "Project Marketplace",
+    title: 'Project Marketplace',
     description:
-      "Post your construction projects and connect with verified professionals instantly",
+      'Post your construction projects and connect with verified professionals instantly',
     icon: Building2,
     image:
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&h=600&fit=crop&q=80",
-    stats: "2.4K+ Projects",
-    color: "blue",
+      'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&h=600&fit=crop&q=80',
+    stats: '2.4K+ Projects',
+    color: 'primary',
   },
   {
-    title: "Competitive Bidding",
+    title: 'Competitive Bidding',
     description:
-      "Contractors, suppliers, and architects compete for your project with transparent pricing",
+      'Contractors, suppliers, and architects compete for your project with transparent pricing',
     icon: Users,
     image:
-      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop&q=80",
-    stats: "95% Fair Pricing",
-    color: "green",
+      'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&h=600&fit=crop&q=80',
+    stats: '95% Fair Pricing',
+    color: 'primary',
   },
   {
-    title: "Secure Platform",
+    title: 'Secure Platform',
     description:
-      "Escrow-based payments and real-time communication ensure project success",
+      'Escrow-based payments and real-time communication ensure project success',
     icon: Shield,
     image:
-      "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop&q=80",
-    stats: "100% Protected",
-    color: "purple",
+      'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop&q=80',
+    stats: '100% Protected',
+    color: 'primary',
   },
 ];
 
 const FEATURES = [
   {
     icon: Building2,
-    title: "Easy Project Posting",
+    title: 'Easy Project Posting',
     description:
-      "Simple interface to post construction projects and reach qualified professionals",
-    color: "blue",
+      'Simple interface to post construction projects and reach qualified professionals',
   },
   {
     icon: Users,
-    title: "Competitive Bidding",
+    title: 'Competitive Bidding',
     description:
-      "Multiple contractors bid on your project ensuring best value and quality",
-    color: "green",
+      'Multiple contractors bid on your project ensuring best value and quality',
   },
   {
     icon: MessageCircle,
-    title: "Real-time Communication",
+    title: 'Real-time Communication',
     description:
-      "Built-in messaging and notifications keep everyone connected and informed",
-    color: "orange",
+      'Built-in messaging and notifications keep everyone connected and informed',
   },
   {
     icon: Shield,
-    title: "Secure Escrow Payments",
+    title: 'Secure Escrow Payments',
     description:
-      "Protected payments released only when milestones are completed successfully",
-    color: "purple",
+      'Protected payments released only when milestones are completed successfully',
   },
   {
     icon: Star,
-    title: "Transparent Evaluation",
+    title: 'Transparent Evaluation',
     description:
-      "Automated bid assessment and user ratings ensure fair project awards",
-    color: "yellow",
+      'Automated bid assessment and user ratings ensure fair project awards',
   },
 ];
 
-const COLOR_VARIANTS = {
-  blue: {
-    bg: "bg-blue-500",
-    hover: "hover:bg-blue-600",
-    text: "text-blue-600",
-    light: "bg-blue-50",
-    border: "border-blue-500",
-  },
-  green: {
-    bg: "bg-green-500",
-    hover: "hover:bg-green-600",
-    text: "text-green-600",
-    light: "bg-green-50",
-    border: "border-green-500",
-  },
-  purple: {
-    bg: "bg-purple-500",
-    hover: "hover:bg-purple-600",
-    text: "text-purple-600",
-    light: "bg-purple-50",
-    border: "border-purple-500",
-  },
-  orange: {
-    bg: "bg-orange-500",
-    hover: "hover:bg-orange-600",
-    text: "text-orange-600",
-    light: "bg-orange-50",
-    border: "border-orange-500",
-  },
-  yellow: {
-    bg: "bg-yellow-500",
-    hover: "hover:bg-yellow-600",
-    text: "text-yellow-600",
-    light: "bg-yellow-50",
-    border: "border-yellow-500",
-  },
-};
-
-const ServiceIcon = ({ Icon, isActive, color = "blue" }) => {
-  const colors = COLOR_VARIANTS[color];
-
-  return (
-    <div
-      className={`
-      w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300
-      ${
-        isActive
-          ? `${colors.bg} text-white shadow-lg`
-          : `bg-slate-100 text-slate-600 group-hover:${colors.light} group-hover:${colors.text}`
-      }
-    `}
-    >
-      <Icon className="w-5 h-5" />
-    </div>
-  );
-};
-
 const ServiceCard = ({ service, index, isActive, onActivate }) => {
-  const colors = COLOR_VARIANTS[service.color];
-
   return (
-    <div
-      className={`
-        group p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer transform
-        ${
-          isActive
-            ? `${colors.border} ${colors.light} shadow-xl scale-105`
-            : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg hover:-translate-y-1"
-        }
-      `}
+    <motion.div
+      whileHover={{ x: 8 }}
       onClick={onActivate}
+      className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 ${
+        isActive
+          ? 'glass glow-border'
+          : 'glass border border-border hover:border-primary/50'
+      }`}
     >
       <div className="flex items-start gap-4">
-        <ServiceIcon
-          Icon={service.icon}
-          isActive={isActive}
-          color={service.color}
-        />
+        <div
+          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${
+            isActive
+              ? 'bg-gradient-purple text-white shadow-lg shadow-primary/50'
+              : 'glass text-primary'
+          }`}
+        >
+          <service.icon className="w-7 h-7" />
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-slate-900 text-lg leading-tight">
+            <h3 className="font-bold text-foreground text-lg leading-tight uppercase tracking-wide">
               {service.title}
             </h3>
             <span
-              className={`
-              text-xs px-3 py-1 rounded-full font-medium transition-colors whitespace-nowrap
-              ${
+              className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${
                 isActive
-                  ? `${colors.bg} text-white`
-                  : "bg-slate-200 text-slate-600 group-hover:bg-slate-300"
-              }
-            `}
+                  ? 'bg-gradient-purple text-white'
+                  : 'glass text-foreground/60'
+              }`}
             >
               {service.stats}
             </span>
           </div>
-          <p className="text-slate-600 text-sm leading-relaxed">
+          <p className="text-foreground/60 text-sm leading-relaxed">
             {service.description}
           </p>
         </div>
       </div>
 
       {isActive && (
-        <div
-          className={`absolute bottom-0 left-0 right-0 h-1 ${colors.bg} rounded-b-2xl`}
+        <motion.div
+          layoutId="activeServiceIndicator"
+          className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-purple rounded-b-2xl"
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -196,97 +133,84 @@ const ServiceVisual = ({ service }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
-    <div className="relative group">
-      <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100">
+    <div className="relative group h-full">
+      <div className="aspect-[4/3] glass glow-border rounded-2xl overflow-hidden">
         <img
           src={service.image}
           alt={service.title}
-          className={`
-            w-full h-full object-cover transition-all duration-700
-            ${imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"}
-            group-hover:scale-110
-          `}
+          className={`w-full h-full object-cover transition-all duration-700 ${
+            imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+          } group-hover:scale-110`}
           onLoad={() => setImageLoaded(true)}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <div className="absolute bottom-0 left-0 right-0 p-8">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h4 className="text-2xl font-bold mb-2 leading-tight">
+              <h4 className="text-2xl font-bold mb-2 leading-tight text-foreground uppercase tracking-wide">
                 {service.title}
               </h4>
-              <p className="text-white/90 text-sm leading-relaxed">
+              <p className="text-foreground/80 text-sm leading-relaxed">
                 {service.description}
               </p>
             </div>
-            <div
-              className={`
-              w-10 h-10 rounded-lg flex items-center justify-center ml-4 transition-transform group-hover:scale-110
-              ${COLOR_VARIANTS[service.color].bg}
-            `}
-            >
-              <service.icon className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 bg-gradient-purple rounded-xl flex items-center justify-center ml-4 transition-transform group-hover:scale-110 glow-border">
+              <service.icon className="w-6 h-6 text-white" />
             </div>
           </div>
         </div>
 
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-slate-200 animate-pulse" />
-        )}
+        {!imageLoaded && <div className="absolute inset-0 glass animate-pulse" />}
       </div>
     </div>
   );
 };
 
 const FeatureCard = ({ feature, index }) => {
-  const colors = COLOR_VARIANTS[feature.color];
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
-    <div
-      className="group p-5 bg-white rounded-2xl border border-gray-200 hover:shadow-xl transition-all duration-300 text-center transform hover:-translate-y-2"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.1 }}
+      whileHover={{ y: -8, scale: 1.05 }}
+      className="group p-6 glass glow-border rounded-2xl text-center transition-all duration-300"
     >
-      <div
-        className={`
-        w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300
-        ${
-          isHovered
-            ? `${colors.bg} text-white shadow-lg transform scale-110`
-            : `${colors.light} ${colors.text}`
-        }
-      `}
-      >
-        <feature.icon className="w-6 h-6" />
+      <div className="w-14 h-14 bg-gradient-purple rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/50">
+        <feature.icon className="w-7 h-7 text-white" />
       </div>
 
-      <h4 className="font-semibold text-gray-900 mb-2 text-sm leading-tight">
+      <h4 className="font-bold text-foreground mb-2 text-sm leading-tight uppercase tracking-wide">
         {feature.title}
       </h4>
-      <p className="text-xs text-gray-600 leading-relaxed">
+      <p className="text-xs text-foreground/60 leading-relaxed">
         {feature.description}
       </p>
-    </div>
+    </motion.div>
   );
 };
 
-const StatsBar = ({ activeService }) => (
-  <div className="flex items-center justify-center gap-8 mb-8 p-4 bg-slate-50 rounded-xl">
+const StatsBar = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="flex items-center justify-center gap-12 mb-12 p-6 glass glow-border rounded-2xl"
+  >
     <div className="text-center">
-      <div className="text-2xl font-bold text-blue-600 mb-1">15K+</div>
-      <div className="text-xs text-slate-600">Active Users</div>
+      <div className="text-3xl font-bold text-gradient mb-1">15K+</div>
+      <div className="text-xs text-foreground/60 uppercase tracking-wider">Active Users</div>
     </div>
     <div className="text-center">
-      <div className="text-2xl font-bold text-green-600 mb-1">98%</div>
-      <div className="text-xs text-slate-600">Success Rate</div>
+      <div className="text-3xl font-bold text-gradient mb-1">98%</div>
+      <div className="text-xs text-foreground/60 uppercase tracking-wider">Success Rate</div>
     </div>
     <div className="text-center">
-      <div className="text-2xl font-bold text-purple-600 mb-1">$2.1M</div>
-      <div className="text-xs text-slate-600">Projects Value</div>
+      <div className="text-3xl font-bold text-gradient mb-1">$2.1M</div>
+      <div className="text-xs text-foreground/60 uppercase tracking-wider">Projects Value</div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const PlatformServices = () => {
@@ -301,59 +225,62 @@ const PlatformServices = () => {
   }, []);
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-slate-50">
-      <div className="max-w-6xl mx-auto px-6">
-        <header className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 leading-tight">
-            Smart <span className="text-blue-600">Construction Platform</span>
+    <section className="py-24 relative overflow-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+        {/* Header */}
+        <SectionAnimator className="text-center mb-16">
+          <h2 className="text-4xl md:text-6xl font-bold text-foreground mb-4 leading-tight uppercase">
+            SMART <span className="text-gradient">CONSTRUCTION PLATFORM</span>
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-foreground/60 max-w-3xl mx-auto leading-relaxed">
             Connecting customers with verified construction professionals
             through transparent bidding and secure project management
           </p>
-        </header>
+        </SectionAnimator>
 
-        <StatsBar activeService={activeService} />
+        <StatsBar />
 
-        <div className="grid lg:grid-cols-2 gap-12 mb-20">
-          <div className="space-y-4">
-            {SERVICES.map((service, index) => (
-              <ServiceCard
-                key={service.title}
-                service={service}
-                index={index}
-                isActive={activeService === index}
-                onActivate={() => setActiveService(index)}
-              />
-            ))}
+        {/* Services Grid */}
+        <SectionAnimator delay={0.2}>
+          <div className="grid lg:grid-cols-2 gap-12 mb-20">
+            <div className="space-y-4">
+              {SERVICES.map((service, index) => (
+                <ServiceCard
+                  key={service.title}
+                  service={service}
+                  index={index}
+                  isActive={activeService === index}
+                  onActivate={() => setActiveService(index)}
+                />
+              ))}
+            </div>
+
+            <div className="lg:pl-8">
+              <ServiceVisual service={SERVICES[activeService]} />
+            </div>
           </div>
+        </SectionAnimator>
 
-          <div className="lg:pl-8">
-            <ServiceVisual service={SERVICES[activeService]} />
-          </div>
-        </div>
+        {/* Features */}
+        <SectionAnimator delay={0.4}>
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-2 uppercase">
+                WHY CHOOSE <span className="text-gradient">OUR PLATFORM?</span>
+              </h3>
+              <p className="text-foreground/60 max-w-2xl mx-auto">
+                Comprehensive tools and features designed to make your
+                construction projects successful
+              </p>
+            </div>
 
-        <div className="space-y-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-slate-900 mb-2">
-              Why Choose Our Platform?
-            </h3>
-            <p className="text-slate-600 max-w-2xl mx-auto">
-              Comprehensive tools and features designed to make your
-              construction projects successful
-            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {FEATURES.map((feature, index) => (
+                <FeatureCard key={feature.title} feature={feature} index={index} />
+              ))}
+            </div>
           </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            {FEATURES.map((feature, index) => (
-              <FeatureCard
-                key={feature.title}
-                feature={feature}
-                index={index}
-              />
-            ))}
-          </div>
-        </div>
+        </SectionAnimator>
       </div>
     </section>
   );

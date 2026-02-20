@@ -1,19 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Button } from "../ui/Button";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const navItems = [
-    { name: "Home", href: "#home" },
-    { name: "About", href: "/about" },
-    { name: "How it works", href: "#how-it-works" },
-    { name: "Services", href: "/services" },
-    { name: "Contact Us", href: "#footer" },
+    { name: "HOME", href: "#home" },
+    { name: "ABOUT", href: "/about" },
+    { name: "HOW IT WORKS", href: "#how-it-works" },
+    { name: "SERVICES", href: "/services" },
+    { name: "CONTACT", href: "#footer" },
   ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (location.state?.scrollTo) {
@@ -69,123 +81,132 @@ const Header = () => {
   };
 
   return (
-    <>
-      <video
-        className="fixed inset-0 w-full h-full object-cover -z-10"
-        src="https://videos.pexels.com/video-files/19736907/19736907-uhd_2560_1440_30fps.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-      />
+    <motion.header
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6 }}
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? 'glass glow-border' : 'bg-transparent'
+      }`}
+    >
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
+          <Link
+            to="/"
+            onClick={() => {
+              if (location.pathname === "/") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="flex items-center gap-3 group"
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400 }}
+              className="text-3xl font-bold text-gradient"
+            >
+              Bid2Build
+            </motion.div>
+          </Link>
 
-      <header className="fixed top-0 w-full bg-black/20 backdrop-blur-lg border-b border-white/10 z-50">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link
-                to="/"
+          <nav className="hidden lg:flex items-center gap-8">
+            {navItems.map((item, index) => (
+              <motion.button
+                key={item.name}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
                 onClick={() => {
-                  if (location.pathname === "/") {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  if (item.name === "CONTACT") {
+                    handleContactUs();
                   } else {
-                    navigate("/");
+                    handleNav(item.href);
                   }
                 }}
+                className="relative text-foreground/80 hover:text-foreground transition-colors duration-300 font-medium text-sm uppercase tracking-wide group"
               >
-                <div className="h-20 w-auto object-contain cursor-pointer hover:scale-105 transition-transform duration-200 flex items-center">
-                  <span className="text-white text-2xl font-bold">Bid2Build</span>
-                </div>
-              </Link>
-            </div>
+                {item.name}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-purple transition-all duration-300 group-hover:w-full" />
+              </motion.button>
+            ))}
+          </nav>
 
-            <nav className="hidden lg:flex items-center gap-20">
+          <div className="hidden lg:flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/login")}
+              className="text-sm uppercase tracking-wide"
+            >
+              Login
+            </Button>
+            <Button
+              variant="gradient"
+              onClick={() => navigate("/register")}
+              className="text-sm uppercase tracking-wide"
+            >
+              Get Started
+            </Button>
+          </div>
+
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="lg:hidden p-2 text-foreground hover:text-primary transition-colors"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden border-t border-border glass"
+          >
+            <div className="px-2 py-6 space-y-2">
               {navItems.map((item) => (
                 <button
                   key={item.name}
                   onClick={() => {
-                    if (item.name === "Contact Us") {
+                    if (item.name === "CONTACT") {
                       handleContactUs();
                     } else {
                       handleNav(item.href);
                     }
                   }}
-                  className="relative text-white/90 hover:text-white transition-colors duration-200 font-medium text-sm group"
+                  className="block w-full text-left px-4 py-3 text-foreground/80 hover:text-foreground hover:bg-primary/10 rounded-lg transition-all duration-300 font-medium uppercase tracking-wide text-sm"
                 >
                   {item.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white transition-all duration-200 group-hover:w-full"></span>
                 </button>
               ))}
-            </nav>
 
-            <div className="hidden lg:flex items-center gap-3">
-              <button
-                onClick={() => navigate("/login")}
-                className="px-6 py-2 text-white/90 hover:text-white transition-colors font-medium text-sm"
-              >
-                Login
-              </button>
-              <button
-                onClick={() => navigate("/register")}
-                className="px-6 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg text-white font-medium text-sm transition-all duration-200 hover:scale-105"
-              >
-                Register
-              </button>
-            </div>
-
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-white/90 hover:text-white transition-colors hover:bg-white/10 rounded-lg"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-
-          {isMenuOpen && (
-            <div className="lg:hidden border-t border-white/10 bg-black/40 backdrop-blur-lg">
-              <div className="px-2 py-6 space-y-2">
-                {navItems.map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      if (item.name === "Contact Us") {
-                        handleContactUs();
-                      } else {
-                        handleNav(item.href);
-                      }
-                    }}
-                    className="block w-full text-left px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium"
-                  >
-                    {item.name}
-                  </button>
-                ))}
-
-                <div className="pt-4 space-y-2 border-t border-white/10 mt-4">
-                  <button
-                    onClick={() => {
-                      navigate("/login");
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg font-medium text-left transition-all duration-200"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate("/register");
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-medium transition-all duration-200"
-                  >
-                    Register
-                  </button>
-                </div>
+              <div className="pt-4 space-y-2 border-t border-border mt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    navigate("/login");
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full"
+                >
+                  Login
+                </Button>
+                <Button
+                  variant="gradient"
+                  onClick={() => {
+                    navigate("/register");
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full"
+                >
+                  Get Started
+                </Button>
               </div>
             </div>
-          )}
-        </div>
-      </header>
-    </>
+          </motion.div>
+        )}
+      </div>
+    </motion.header>
   );
 };
 

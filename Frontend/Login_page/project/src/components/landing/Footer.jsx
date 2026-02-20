@@ -1,65 +1,167 @@
-import React from "react";
-import { Building2, Mail, Phone, MapPin } from "lucide-react";
+import React from 'react';
+import { motion } from 'framer-motion';
+import {
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  Github,
+  Twitter,
+  Linkedin,
+  Facebook,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '../ui/Button';
 
 const Footer = () => {
+  const quickLinks = [
+    { name: 'How it Works', href: '#how-it-works' },
+    { name: 'Services', href: '/services' },
+    { name: 'About', href: '/about' },
+    { name: 'Contact', href: '#footer' },
+  ];
+
+  const professionalLinks = [
+    { name: 'Find Projects', href: '#' },
+    { name: 'Submit Bids', href: '#' },
+    { name: 'Resources', href: '#' },
+    { name: 'Support', href: '#' },
+  ];
+
+  const socialLinks = [
+    { icon: Twitter, href: '#', label: 'Twitter' },
+    { icon: Facebook, href: '#', label: 'Facebook' },
+    { icon: Linkedin, href: '#', label: 'LinkedIn' },
+    { icon: Github, href: '#', label: 'GitHub' },
+  ];
+
   return (
-    <footer id="footer" className="bg-gray-900 text-white py-16">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-8">
-          <div>
+    <footer id="footer" className="relative border-t border-border">
+      <div className="max-w-[1400px] mx-auto px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+          {/* Brand Column */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-purple rounded-xl flex items-center justify-center">
+                <Building2 className="w-7 h-7 text-white" />
               </div>
-              <span className="text-2xl font-bold">Bid2Build</span>
+              <span className="text-2xl font-bold text-gradient">Bid2Build</span>
             </div>
-            <p className="text-gray-400 mb-4">
-              Connecting construction professionals with clients for successful project delivery.
+            <p className="text-foreground/60 mb-6 leading-relaxed">
+              Connecting construction professionals with clients for successful
+              project delivery.
             </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <div className="space-y-2">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">How it Works</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Services</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">About</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Contact</a>
+            <div className="flex gap-3">
+              {socialLinks.map((social, index) => (
+                <motion.a
+                  key={social.label}
+                  href={social.href}
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  className="w-10 h-10 glass glow-border rounded-lg flex items-center justify-center text-foreground/60 hover:text-primary transition-colors"
+                  aria-label={social.label}
+                >
+                  <social.icon className="w-5 h-5" />
+                </motion.a>
+              ))}
             </div>
-          </div>
+          </motion.div>
 
-          <div>
-            <h3 className="font-semibold mb-4">For Professionals</h3>
-            <div className="space-y-2">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Find Projects</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Submit Bids</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Resources</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors block">Support</a>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-4">Contact Info</h3>
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-wider text-sm">
+              Quick Links
+            </h3>
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-gray-400">
-                <Mail className="w-4 h-4" />
-                <span>info@bid2build.com</span>
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="block text-foreground/60 hover:text-primary transition-colors"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* For Professionals */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-wider text-sm">
+              For Professionals
+            </h3>
+            <div className="space-y-3">
+              {professionalLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  className="block text-foreground/60 hover:text-primary transition-colors"
+                >
+                  {link.name}
+                </a>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Contact Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-wider text-sm">
+              Contact Info
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-foreground/60">
+                <div className="w-9 h-9 glass rounded-lg flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm">info@bid2build.com</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <Phone className="w-4 h-4" />
-                <span>+1 (555) 123-4567</span>
+              <div className="flex items-center gap-3 text-foreground/60">
+                <div className="w-9 h-9 glass rounded-lg flex items-center justify-center">
+                  <Phone className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm">+1 (555) 123-4567</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <MapPin className="w-4 h-4" />
-                <span>New York, NY</span>
+              <div className="flex items-center gap-3 text-foreground/60">
+                <div className="w-9 h-9 glass rounded-lg flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm">New York, NY</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 Bid2Build. All rights reserved.</p>
-        </div>
+        {/* Bottom Bar */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="border-t border-border pt-8 text-center"
+        >
+          <p className="text-foreground/40 text-sm">
+            &copy; 2024 Bid2Build. All rights reserved.
+          </p>
+        </motion.div>
       </div>
     </footer>
   );
