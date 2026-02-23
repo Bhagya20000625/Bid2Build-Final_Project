@@ -5,7 +5,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Github,
   Twitter,
   Linkedin,
   Facebook,
@@ -32,7 +31,6 @@ const Footer = () => {
     { icon: Twitter, href: '#', label: 'Twitter' },
     { icon: Facebook, href: '#', label: 'Facebook' },
     { icon: Linkedin, href: '#', label: 'LinkedIn' },
-    { icon: Github, href: '#', label: 'GitHub' },
   ];
 
   return (
